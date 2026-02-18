@@ -1,0 +1,54 @@
+@layer base {
+  body {
+    font-family: "Google Sans", "Prompt", sans-serif;
+  }
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+.mono-font {
+  font-family: "Chivo Mono", "Space Mono", monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Google Sans", sans-serif;
+  font-weight: 700 !important;
+}
+
+@layer components {
+  .ant-breadcrumb .ant-breadcrumb-link:hover,
+  .ant-breadcrumb a:hover {
+    background-color: transparent !important;
+    text-decoration: underline !important;
+    color: inherit;
+  }
+
+  .ant-breadcrumb li .ant-breadcrumb-link {
+    transition: none !important;
+    background: transparent !important;
+  }
+}
+
+.btn-cancel-gray {
+  color: #666666 !important;
+  border-color: #d9d9d9 !important;
+  background: transparent !important;
+  transition: all 0.2s;
+}
+
+.btn-cancel-gray:hover {
+  color: #ff4d4f !important;
+  border-color: #ff4d4f !important;
+  background: #fff1f0 !important;
+}
