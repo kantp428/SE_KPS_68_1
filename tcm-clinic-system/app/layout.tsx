@@ -1,12 +1,17 @@
+import { ThemeProvider } from "@/components/theme-provider";
 import type { Metadata } from "next";
+import { Chivo_Mono } from "next/font/google";
 import "./globals.css";
-import { AntdRegistry } from "@ant-design/nextjs-registry";
-import { App, ConfigProvider } from "antd";
-import theme from "@/theme/themeConfig";
+import { TooltipProvider } from "@/components/ui/tooltip";
+
+const chivoMono = Chivo_Mono({
+  subsets: ["latin"],
+  variable: "--font-chivo-mono",
+});
 
 export const metadata: Metadata = {
-  title: "TCM Clinic System",
-  description: "ระบบบริหารจัดการคลินิกการแพทย์แผนจีน",
+  title: "TCM-CLINIC (SE-Project)",
+  description: "Generate By G1",
 };
 
 export default function RootLayout({
@@ -15,32 +20,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="th">
-      <head>
-        {/* Preconnect เพื่อให้โหลดฟอนต์ได้เร็วขึ้น */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-
-        {/* โหลดเฉพาะ Google Sans และ Chivo Mono ตามที่คุณต้องการ */}
-        <link
-          href="https://fonts.googleapis.com/css2?family=Chivo+Mono:ital,wght@0,100..900;1,100..900&family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&family=Prompt:ital,wght@0,100..900;1,100..900&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body className="antialiased">
-        <AntdRegistry>
-          <ConfigProvider theme={theme}>
-            <App
-              notification={{ placement: "topRight", stack: { threshold: 3 } }}
-            >
-              {children}
-            </App>
-          </ConfigProvider>
-        </AntdRegistry>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${chivoMono.variable} antialiased`}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <TooltipProvider>{children}</TooltipProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
