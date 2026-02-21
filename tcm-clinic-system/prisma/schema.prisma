@@ -17,18 +17,11 @@ model account {
 }
 
 model appointment {
-  id           Int                     @id @default(autoincrement())
-  service_id   Int
-  patient_id   Int
-  doctor_id    Int?
-  start_at     DateTime                @db.Timestamptz(6)
-  end_at       DateTime                @db.Timestamptz(6)
-  is_walked_in Boolean                 @default(false)
-  status       appointment_status_enum @default(PENDING)
-  staff        staff?                  @relation(fields: [doctor_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_app_doctor")
-  patient      patient                 @relation(fields: [patient_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_app_patient")
-  service      service                 @relation(fields: [service_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_app_service")
-  treatment    treatment?
+  id         Int                     @id @default(autoincrement())
+  patient_id Int
+  datetime   DateTime                @db.Timestamptz(6)
+  status     appointment_status_enum @default(CONFIRMED)
+  patient    patient                 @relation(fields: [patient_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_app_patient")
 }
 
 model health_profile {
@@ -55,15 +48,15 @@ model invoice {
 }
 
 model invoice_item {
-  id          Int       @id @default(autoincrement())
-  invoice_id  Int
-  service_id  Int?
-  medicine_id Int?
-  quantity    Int       @default(1)
-  unit_price  Decimal   @db.Decimal(10, 2)
-  invoice     invoice   @relation(fields: [invoice_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_item_inv")
-  medicine    medicine? @relation(fields: [medicine_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_item_medicine")
-  service     service?  @relation(fields: [service_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_item_service")
+  id           Int        @id @default(autoincrement())
+  invoice_id   Int
+  medicine_id  Int?
+  treatment_id Int?
+  quantity     Int        @default(1)
+  unit_price   Decimal    @db.Decimal(10, 2)
+  invoice      invoice    @relation(fields: [invoice_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_item_inv")
+  medicine     medicine?  @relation(fields: [medicine_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_item_medicine")
+  treatment    treatment? @relation(fields: [treatment_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_item_treatment")
 }
 
 model medicine {
@@ -89,6 +82,7 @@ model patient {
   health_profile  health_profile[]
   invoice         invoice[]
   account         account?         @relation(fields: [account_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_patient_account")
+  treatment       treatment[]
 }
 
 model room {
@@ -99,12 +93,11 @@ model room {
 }
 
 model service {
-  id              Int            @id @default(autoincrement())
-  name            String         @db.VarChar(100)
-  price           Decimal        @db.Decimal(10, 2)
+  id              Int         @id @default(autoincrement())
+  name            String      @db.VarChar(100)
+  price           Decimal     @db.Decimal(10, 2)
   duration_minute Int
-  appointment     appointment[]
-  invoice_item    invoice_item[]
+  treatment       treatment[]
 }
 
 model staff {
@@ -115,21 +108,27 @@ model staff {
   phone_number  String          @db.VarChar(20)
   staff_role    staff_role_enum
   account_id    Int             @unique
-  appointment   appointment[]
   account       account         @relation(fields: [account_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_staff_account")
+  treatment     treatment[]
   work_schedule work_schedule[]
 }
 
 model treatment {
   id                Int                   @id @default(autoincrement())
   health_profile_id Int
-  appointment_id    Int                   @unique
+  patient_id        Int
+  doctor_id         Int
+  service_id        Int
   room_id           Int
-  date_time         DateTime              @default(now()) @db.Timestamptz(6)
+  start_at          DateTime              @default(now()) @db.Timestamptz(6)
+  end_at            DateTime?             @db.Timestamptz(6)
   treatment_status  treatment_status_enum
-  appointment       appointment           @relation(fields: [appointment_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_treat_app")
+  invoice_item      invoice_item[]
+  staff             staff                 @relation(fields: [doctor_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_treat_doc")
   health_profile    health_profile        @relation(fields: [health_profile_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_treat_hp")
+  patient           patient               @relation(fields: [patient_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_treat_pat")
   room              room                  @relation(fields: [room_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_treat_room")
+  service           service               @relation(fields: [service_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_treat_serv")
 }
 
 model work_schedule {
@@ -149,11 +148,9 @@ enum account_role_enum {
 }
 
 enum appointment_status_enum {
-  PENDING
   CONFIRMED
   CANCELLED
   COMPLETED
-  NO_SHOW
 }
 
 enum blood_group_enum {
@@ -161,20 +158,11 @@ enum blood_group_enum {
   B
   AB
   O
-  A_POS  @map("A+")
-  A_NEG  @map("A-")
-  B_POS  @map("B+")
-  B_NEG  @map("B-")
-  AB_POS @map("AB+")
-  AB_NEG @map("AB-")
-  O_POS  @map("O+")
-  O_NEG  @map("O-")
 }
 
 enum gender_enum {
   MALE
   FEMALE
-  OTHER
 }
 
 enum invoice_status_enum {
