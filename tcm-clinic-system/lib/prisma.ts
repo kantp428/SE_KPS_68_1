@@ -1,7 +1,6 @@
-// lib/prisma.ts
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "@prisma/client"; // หรือ path ที่คุณเจนไว้
+import { PrismaClient } from "@prisma/client";
 
 const prismaClientSingleton = () => {
   // 1. สร้าง Connection Pool ตามมาตรฐาน pg
