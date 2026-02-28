@@ -1,10 +1,11 @@
 import prisma from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 // [GET ONE]
 export async function GET(
   _req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
@@ -13,13 +14,16 @@ export async function GET(
     });
 
     if (!room) {
-      return NextResponse.json({ message: "Room not found" }, { status: 404 });
+      return NextResponse.json(
+        { message: "ไม่พบข้อมูลห้องที่ระบุ" },
+        { status: 404 },
+      );
     }
 
     return NextResponse.json(room);
   } catch (error) {
     return NextResponse.json(
-      { message: "Internal server error" },
+      { message: "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์" },
       { status: 500 },
     );
   }
@@ -28,12 +32,12 @@ export async function GET(
 // [PATCH]
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const body = await req.json();
     const { name, status } = body;
-    const { id } = await params;
 
     const updatedRoom = await prisma.room.update({
       where: { id: Number(id) },
@@ -45,9 +49,17 @@ export async function PATCH(
 
     return NextResponse.json(updatedRoom);
   } catch (error) {
-    console.error("Update room error:", error);
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2025"
+    ) {
+      return NextResponse.json(
+        { message: "ไม่พบห้องที่ต้องการแก้ไข" },
+        { status: 404 },
+      );
+    }
     return NextResponse.json(
-      { message: "Internal server error" },
+      { message: "เกิดข้อผิดพลาดในการอัปเดตข้อมูล" },
       { status: 500 },
     );
   }
@@ -56,19 +68,25 @@ export async function PATCH(
 // [DELETE]
 export async function DELETE(
   _req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
-    await prisma.room.delete({
-      where: { id: Number(id) },
-    });
+    await prisma.room.delete({ where: { id: Number(id) } });
 
-    return NextResponse.json({ message: "Room deleted successfully" });
+    return NextResponse.json({ message: "ลบข้อมูลห้องเรียบร้อยแล้ว" });
   } catch (error) {
-    console.error("Delete room error:", error);
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2003"
+    ) {
+      return NextResponse.json(
+        { message: "ไม่สามารถลบได้ เนื่องจากห้องนี้ถูกใช้งานในข้อมูลอื่นอยู่" },
+        { status: 400 },
+      );
+    }
     return NextResponse.json(
-      { message: "Internal server error" },
+      { message: "เกิดข้อผิดพลาดในการลบข้อมูล" },
       { status: 500 },
     );
   }

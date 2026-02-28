@@ -1,197 +1,232 @@
-// "use client";
+"use client";
 
-// import { useNotify } from "@/app/hook/useNotify";
-// import { updateRoom, useRoom } from "@/app/hook/useRoom";
-// import { RoomFormValues } from "@/types/room";
-// import {
-//   CaretLeftIcon,
-//   CheckCircleIcon,
-//   DoorIcon,
-//   FloppyDiskIcon,
-// } from "@phosphor-icons/react";
-// import {
-//   App,
-//   Breadcrumb,
-//   Button,
-//   Card,
-//   Col,
-//   Flex,
-//   Form,
-//   Space,
-//   Input,
-//   Row,
-//   Select,
-//   Skeleton,
-//   Typography,
-//   theme,
-// } from "antd";
-// import { useRouter, useParams } from "next/navigation";
-// import { useEffect, useState } from "react";
+import { handleException } from "@/app/utils/handleException";
+import { BreadcrumbCustom } from "@/components/ui/breadcrum-custom";
+import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useRoom } from "@/hooks/useRoom";
+import { RoomFormValues } from "@/types/room";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import * as z from "zod";
 
-// const { Title } = Typography;
+const roomSchema = z.object({
+  name: z.string().min(1, "กรุณากรอกชื่อห้อง"),
+  status: z.string().min(1, "กรุณาเลือกสถานะ"),
+});
 
-// const statusOptions = [
-//   { label: "เปิดใช้งาน", value: "AVAILABLE" },
-//   { label: "ปิดใช้งาน", value: "UNAVAILABLE" },
-// ];
+const STATUS_OPTIONS = [
+  { value: "AVAILABLE", label: "เปิดใช้งาน" },
+  { value: "UNAVAILABLE", label: "ปิดใช้งาน" },
+];
 
-// const EditRoomPage = () => {
-//   const { token } = theme.useToken();
-//   const { modal } = App.useApp();
-//   const params = useParams();
-//   const router = useRouter();
+const EditRoomPage = () => {
+  const router = useRouter();
+  const params = useParams();
+  const id = Number(params.id);
 
-//   const id = params.id as string;
-//   const numericId = parseInt(id);
+  const [isSave, setIsSave] = useState(false);
+  const [isCancelOpen, setIsCancelOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
-//   const [form] = Form.useForm();
-//   const { success: successNoti, error: errorNoti } = useNotify();
-//   const [submitLoading, setSubmitLoading] = useState(false);
+  const { fetchOne, updateRoom } = useRoom();
 
-//   const { detail, loading, fetchOne } = useRoom();
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    trigger,
+    watch,
+    reset,
+    formState: { errors, isDirty },
+  } = useForm<RoomFormValues>({
+    resolver: zodResolver(roomSchema),
+  });
 
-//   useEffect(() => {
-//     if (numericId) {
-//       fetchOne(numericId);
-//     }
-//   }, [numericId]);
+  useEffect(() => {
+    const initData = async () => {
+      if (!id) return;
+      try {
+        setIsInitialLoading(true);
+        const data = await fetchOne(id);
+        console.log(data);
+        reset({
+          name: data.name,
+          status: data.status,
+        });
+      } catch (e) {
+        toast.error("ไม่พบข้อมูลห้อง หรือเกิดข้อผิดพลาด");
+        router.push("/staff/room");
+      } finally {
+        setIsInitialLoading(false);
+      }
+    };
+    initData();
+  }, [id]);
 
-//   useEffect(() => {
-//     if (detail) {
-//       form.setFieldsValue(detail);
-//     }
-//   }, [detail, form]);
+  const handleOpenDialog = async () => {
+    const isValid = await trigger();
+    if (isValid) {
+      setIsSave(true);
+    } else {
+      toast.error("กรุณากรอกข้อมูลให้ครบถ้วน");
+    }
+  };
 
-//   if (loading) {
-//     return (
-//       <div>
-//         <Skeleton />
-//       </div>
-//     );
-//   }
+  const handleCancelClick = () => {
+    if (isDirty) {
+      setIsCancelOpen(true);
+    } else {
+      router.back();
+    }
+  };
 
-//   const onFinish = async (values: RoomFormValues) => {
-//     modal.confirm({
-//       title: (
-//         <Space size={12}>
-//           <CheckCircleIcon
-//             size={25}
-//             weight="fill"
-//             style={{ color: token.colorSuccess, paddingTop: "7px" }}
-//           />
-//           <span style={{ fontWeight: 600 }}>ยืนยันการแก้ไข</span>
-//         </Space>
-//       ),
-//       icon: null,
-//       content: (
-//         <div style={{ paddingLeft: 36 }}>
-//           {" "}
-//           <Typography.Text>คุณต้องการบันทึกการแก้ไขใช่หรือไม่?</Typography.Text>
-//         </div>
-//       ),
-//       okText: "ยืนยัน",
-//       okType: "primary",
-//       cancelText: "ยกเลิก",
-//       cancelButtonProps: {
-//         className: "btn-cancel-gray",
-//       },
-//       centered: true,
-//       onOk: async () => {
-//         setSubmitLoading(true);
-//         try {
-//           await updateRoom(numericId, values);
-//           successNoti("แก้ไขข้อมูลสำเร็จ");
-//           router.push("/staff/room");
-//         } catch (error) {
-//           errorNoti("แก้ไขข้อมูลไม่สำเร็จ");
-//         } finally {
-//           setSubmitLoading(false);
-//         }
-//       },
-//     });
-//   };
+  const currentStatus = watch("status");
 
-//   return (
-//     <div style={{ padding: "4px" }}>
-//       <Flex vertical gap="middle">
-//         <Breadcrumb
-//           items={[
-//             { title: "หน้าแรก", href: "/staff/dashboard" },
-//             { title: "จัดการห้องบำบัด", href: "/staff/room" },
-//             { title: "แก้ไขห้อง" },
-//           ]}
-//         />
+  const breadcrumbItems = [
+    { label: "จัดการห้อง", href: "/staff/room" },
+    { label: `แก้ไขข้อมูลห้อง [${id}]` },
+  ];
 
-//         <Flex justify="space-between" align="center">
-//           <Title level={3} style={{ margin: 0 }}>
-//             เพิ่มห้องบำบัดใหม่
-//           </Title>
-//           <Button
-//             type="text"
-//             icon={<CaretLeftIcon size={18} />}
-//             onClick={() => router.back()}
-//             disabled={submitLoading}
-//           >
-//             ย้อนกลับ
-//           </Button>
-//         </Flex>
+  const onSubmit = async (data: RoomFormValues) => {
+    setIsSubmitting(true);
+    try {
+      await updateRoom(id, data);
+      toast.success("แก้ไขข้อมูลสำเร็จ");
+      router.push("/staff/room");
+      router.refresh();
+    } catch (e: unknown) {
+      const errorMessage = handleException(e, "ไม่สามารถแก้ไขข้อมูลได้");
+      toast.error(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-//         <Card variant="outlined">
-//           <Form
-//             form={form}
-//             layout="vertical"
-//             onFinish={onFinish}
-//             initialValues={{ status: "AVAILABLE" }}
-//           >
-//             <Row gutter={[24, 0]}>
-//               <Col xs={24} md={12}>
-//                 <Form.Item
-//                   label="ชื่อห้อง"
-//                   name="name"
-//                   rules={[{ required: true, message: "กรุณากรอกชื่อห้อง" }]}
-//                 >
-//                   <Input
-//                     prefix={<DoorIcon size={18} />}
-//                     placeholder="ตัวอย่าง: Room A-101"
-//                     disabled={submitLoading}
-//                   />
-//                 </Form.Item>
-//               </Col>
+  // แสดง Loading ระหว่างรอข้อมูลจาก API ครั้งแรก
+  if (isInitialLoading) {
+    return (
+      <div className="flex h-100 flex-col items-center justify-center gap-4">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="text-muted-foreground">กำลังโหลดข้อมูลห้อง...</p>
+      </div>
+    );
+  }
 
-//               <Col xs={24} md={12}>
-//                 <Form.Item
-//                   label="สถานะการใช้งาน"
-//                   name="status"
-//                   rules={[{ required: true, message: "กรุณาเลือกสถานะ" }]}
-//                 >
-//                   <Select
-//                     options={statusOptions}
-//                     placeholder="เลือกสถานะห้อง"
-//                     disabled={submitLoading}
-//                   />
-//                 </Form.Item>
-//               </Col>
-//             </Row>
+  return (
+    <div className="p-6 max-w-2xl mx-auto space-y-6">
+      <BreadcrumbCustom items={breadcrumbItems} />
 
-//             <Flex justify="flex-end" style={{ marginTop: 24 }}>
-//               <Form.Item style={{ marginBottom: 0 }}>
-//                 <Button
-//                   type="primary"
-//                   htmlType="submit"
-//                   icon={<FloppyDiskIcon size={18} weight="fill" />}
-//                   size="large"
-//                   style={{ minWidth: 120 }}
-//                   loading={submitLoading}
-//                 >
-//                   บันทึกข้อมูล
-//                 </Button>
-//               </Form.Item>
-//             </Flex>
-//           </Form>
-//         </Card>
-//       </Flex>
-//     </div>
-//   );
-// };
+      <h1 className="text-2xl font-bold tracking-tight">แก้ไขข้อมูลห้อง</h1>
 
-// export default EditRoomPage;
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <form className="space-y-4">
+          {/* ชื่อห้อง */}
+          <div className="space-y-2">
+            <Label htmlFor="name">ชื่อห้อง</Label>
+            <Input
+              id="name"
+              placeholder="กรอกชื่อห้อง"
+              {...register("name")}
+              className={errors.name ? "border-destructive" : ""}
+              disabled={isSubmitting}
+            />
+            {errors.name && (
+              <p className="text-xs text-destructive">{errors.name.message}</p>
+            )}
+          </div>
+
+          {/* สถานะ */}
+          <div className="space-y-2">
+            <Label htmlFor="status">สถานะ</Label>
+            <Select
+              value={currentStatus}
+              onValueChange={(value) =>
+                setValue("status", value, { shouldDirty: true })
+              }
+              disabled={isSubmitting}
+            >
+              <SelectTrigger
+                className={errors.status ? "border-destructive" : ""}
+              >
+                <SelectValue placeholder="เลือกสถานะ" />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUS_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.status && (
+              <p className="text-xs text-destructive">
+                {errors.status.message}
+              </p>
+            )}
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={handleCancelClick}
+              disabled={isSubmitting}
+            >
+              ยกเลิก
+            </Button>
+
+            <Button
+              type="button"
+              className="flex-1"
+              onClick={handleOpenDialog}
+              disabled={isSubmitting || !isDirty}
+            >
+              {isSubmitting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                "บันทึกการแก้ไข"
+              )}
+            </Button>
+          </div>
+        </form>
+
+        <ConfirmDialog
+          open={isCancelOpen}
+          onOpenChange={setIsCancelOpen}
+          title="ยืนยันการยกเลิก?"
+          description="การเปลี่ยนแปลงที่คุณแก้ไขจะสูญหาย"
+          confirmText="ยืนยันยกเลิก"
+          isDestructive={true}
+          onConfirm={() => router.back()}
+        />
+
+        <ConfirmDialog
+          open={isSave}
+          onOpenChange={setIsSave}
+          title="ยืนยันบันทึกการแก้ไข?"
+          description={`คุณกำลังจะเปลี่ยนข้อมูลห้องเป็น "${watch("name")}"`}
+          confirmText="ยืนยันบันทึก"
+          onConfirm={handleSubmit(onSubmit)}
+        />
+      </div>
+    </div>
+  );
+};
+
+export default EditRoomPage;

@@ -1,11 +1,8 @@
+import { Pagination } from "./pagiantion";
+
 export interface RoomList {
   data: Room[];
-  pagination: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
+  pagination: Pagination;
 }
 
 export interface Room {

@@ -1,169 +1,202 @@
-// "use client";
+"use client";
+import { handleException } from "@/app/utils/handleException";
+import { BreadcrumbCustom } from "@/components/ui/breadcrum-custom";
+import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useRoom } from "@/hooks/useRoom";
+import { RoomFormValues } from "@/types/room";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import * as z from "zod";
 
-// import { useNotify } from "@/app/hook/useNotify";
-// import { createRoom } from "@/app/hook/useRoom";
-// import { RoomFormValues } from "@/types/room";
-// import {
-//   CaretLeftIcon,
-//   CheckCircleIcon,
-//   DoorIcon,
-//   FloppyDiskIcon,
-// } from "@phosphor-icons/react";
-// import {
-//   App,
-//   Breadcrumb,
-//   Button,
-//   Card,
-//   Col,
-//   Flex,
-//   Form,
-//   Input,
-//   Row,
-//   Select,
-//   Space,
-//   theme,
-//   Typography,
-// } from "antd";
-// import { useRouter } from "next/navigation";
-// import { useState } from "react";
+// สร้าง Validation Schema ด้วย Zod
+const roomSchema = z.object({
+  name: z.string().min(1, "กรุณากรอกชื่อห้อง"),
+  status: z.string().min(1, "กรุณาเลือกสถานะ"),
+});
 
-// const { Title } = Typography;
+const STATUS_OPTIONS = [
+  { value: "AVAILABLE", label: "เปิดใช้งาน" },
+  { value: "UNAVAILABLE", label: "ปิดใช้งาน" },
+];
 
-// const statusOptions = [
-//   { label: "เปิดใช้งาน", value: "AVAILABLE" },
-//   { label: "ปิดใช้งาน", value: "UNAVAILABLE" },
-// ];
+const NewRoomPage = () => {
+  const router = useRouter();
+  const [isSave, setIsSave] = useState(false);
+  const [isCancelOpen, setIsCancelOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-// const AddRoomPage = () => {
-//   const { token } = theme.useToken();
-//   const { modal } = App.useApp();
-//   const [form] = Form.useForm();
-//   const router = useRouter();
-//   const { success: successNoti, error: errorNoti } = useNotify();
-//   const [submitLoading, setSubmitLoading] = useState(false);
+  const { createRoom } = useRoom();
 
-//   const onFinish = async (values: RoomFormValues) => {
-//     modal.confirm({
-//       title: (
-//         <Space size={12}>
-//           <CheckCircleIcon
-//             size={25}
-//             weight="fill"
-//             style={{ color: token.colorSuccess, paddingTop: "7px" }}
-//           />
-//           <span style={{ fontWeight: 600 }}>ยืนยันการบันทึก</span>
-//         </Space>
-//       ),
-//       icon: null,
-//       content: (
-//         <div style={{ paddingLeft: 36 }}>
-//           {" "}
-//           <Typography.Text>คุณต้องการบันทึกข้อมูลห้องใหม่?</Typography.Text>
-//         </div>
-//       ),
-//       okText: "ยืนยัน",
-//       okType: "primary",
-//       cancelText: "ยกเลิก",
-//       cancelButtonProps: {
-//         className: "btn-cancel-gray",
-//       },
-//       centered: true,
-//       onOk: async () => {
-//         setSubmitLoading(true);
-//         try {
-//           await createRoom(values);
-//           successNoti("เพิ่มข้อมูลห้องเรียบร้อยแล้ว");
-//           router.push("/staff/room");
-//         } catch (error) {
-//           errorNoti("เพิ่มข้อมูลห้องล้มเหลว");
-//         } finally {
-//           setSubmitLoading(false);
-//         }
-//       },
-//     });
-//   };
+  // ประกาศใช้งาน React Hook Form
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    trigger,
+    watch,
+    formState: { errors, isDirty },
+  } = useForm<RoomFormValues>({
+    resolver: zodResolver(roomSchema),
+    defaultValues: {
+      name: "",
+      status: "AVAILABLE",
+    },
+  });
 
-//   return (
-//     <div style={{ padding: "4px" }}>
-//       <Flex vertical gap="middle">
-//         <Breadcrumb
-//           items={[
-//             { title: "หน้าแรก", href: "/staff/dashboard" },
-//             { title: "จัดการห้องบำบัด", href: "/staff/room" },
-//             { title: "เพิ่มห้องใหม่" },
-//           ]}
-//         />
+  const handleOpenDialog = async () => {
+    // สั่งให้ Hook Form เช็ค require ทั้งหมด
+    const isValid = await trigger();
+    if (isValid) {
+      setIsSave(true);
+    } else {
+      toast.error("กรุณากรอกข้อมูลให้ครบถ้วน");
+    }
+  };
 
-//         <Flex justify="space-between" align="center">
-//           <Title level={3} style={{ margin: 0 }}>
-//             เพิ่มห้องบำบัดใหม่
-//           </Title>
-//           <Button
-//             type="text"
-//             icon={<CaretLeftIcon size={18} />}
-//             onClick={() => router.back()}
-//             disabled={submitLoading}
-//           >
-//             ย้อนกลับ
-//           </Button>
-//         </Flex>
+  const handleCancelClick = () => {
+    if (isDirty) {
+      setIsCancelOpen(true);
+    } else {
+      router.back();
+    }
+  };
 
-//         <Card variant="outlined">
-//           <Form
-//             form={form}
-//             layout="vertical"
-//             onFinish={onFinish}
-//             initialValues={{ status: "AVAILABLE" }}
-//           >
-//             <Row gutter={[24, 0]}>
-//               <Col xs={24} md={12}>
-//                 <Form.Item
-//                   label="ชื่อห้อง"
-//                   name="name"
-//                   rules={[{ required: true, message: "กรุณากรอกชื่อห้อง" }]}
-//                 >
-//                   <Input
-//                     prefix={<DoorIcon size={18} />}
-//                     placeholder="ตัวอย่าง: Room A-101"
-//                     disabled={submitLoading}
-//                   />
-//                 </Form.Item>
-//               </Col>
+  // ใช้ watch สำหรับดึงค่า status มาโชว์ใน Select (เนื่องจาก Select ไม่ใช่ native input)
+  const currentStatus = watch("status");
 
-//               <Col xs={24} md={12}>
-//                 <Form.Item
-//                   label="สถานะการใช้งาน"
-//                   name="status"
-//                   rules={[{ required: true, message: "กรุณาเลือกสถานะ" }]}
-//                 >
-//                   <Select
-//                     options={statusOptions}
-//                     placeholder="เลือกสถานะห้อง"
-//                     disabled={submitLoading}
-//                   />
-//                 </Form.Item>
-//               </Col>
-//             </Row>
+  const breadcrumbItems = [
+    { label: "จัดการห้อง", href: "/staff/room" },
+    { label: "เพิ่มข้อมูลห้อง" },
+  ];
 
-//             <Flex justify="flex-end" style={{ marginTop: 24 }}>
-//               <Form.Item style={{ marginBottom: 0 }}>
-//                 <Button
-//                   type="primary"
-//                   htmlType="submit"
-//                   icon={<FloppyDiskIcon size={18} weight="fill" />}
-//                   size="large"
-//                   style={{ minWidth: 120 }}
-//                   loading={submitLoading}
-//                 >
-//                   บันทึกข้อมูล
-//                 </Button>
-//               </Form.Item>
-//             </Flex>
-//           </Form>
-//         </Card>
-//       </Flex>
-//     </div>
-//   );
-// };
+  const onSubmit = async (data: RoomFormValues) => {
+    setIsSubmitting(true);
+    try {
+      await createRoom(data);
+      toast.success("สร้างห้องสำเร็จ");
+      router.push("/staff/room");
+      router.refresh();
+    } catch (e: unknown) {
+      const errorMessage = handleException(e, "ไม่สามารถสร้างห้องได้");
+      toast.error(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-// export default AddRoomPage;
+  return (
+    <div className="p-6 max-w-2xl mx-auto space-y-6">
+      <BreadcrumbCustom items={breadcrumbItems} />
+
+      <h1 className="text-2xl font-bold tracking-tight">เพิ่มห้องใหม่</h1>
+
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* ชื่อห้อง */}
+          <div className="space-y-2">
+            <Label htmlFor="name">ชื่อห้อง</Label>
+            <Input
+              id="name"
+              placeholder="เช่น ห้องตรวจ 01, OR-101"
+              {...register("name")} // ใช้ register แทนการเขียน onChange เอง
+              className={errors.name ? "border-destructive" : ""}
+              disabled={isSubmitting}
+            />
+            {errors.name && (
+              <p className="text-xs text-destructive">{errors.name.message}</p>
+            )}
+          </div>
+
+          {/* สถานะ */}
+          <div className="space-y-2">
+            <Label htmlFor="status">สถานะเริ่มต้น</Label>
+            <Select
+              value={currentStatus}
+              onValueChange={(value) => setValue("status", value)}
+              disabled={isSubmitting}
+            >
+              <SelectTrigger
+                className={errors.status ? "border-destructive" : ""}
+              >
+                <SelectValue placeholder="เลือกสถานะ" />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUS_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.status && (
+              <p className="text-xs text-destructive">
+                {errors.status.message}
+              </p>
+            )}
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={handleCancelClick}
+            >
+              ยกเลิก
+            </Button>
+
+            <Button
+              type="button"
+              className="flex-1"
+              onClick={handleOpenDialog}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                "บันทึกข้อมูล"
+              )}
+            </Button>
+          </div>
+        </form>
+
+        {/* Dialog สำหรับยกเลิก */}
+        <ConfirmDialog
+          open={isCancelOpen}
+          onOpenChange={setIsCancelOpen}
+          title="ยืนยันการยกเลิก?"
+          description="ข้อมูลที่คุณกรอกไว้จะสูญหายและไม่ได้รับการบันทึก"
+          confirmText="ยืนยันยกเลิก"
+          isDestructive={true} // สีแดง
+          onConfirm={() => router.back()}
+        />
+
+        {/* Dialog สำหรับบันทึก */}
+        <ConfirmDialog
+          open={isSave}
+          onOpenChange={setIsSave}
+          title="ยืนยันบันทึกข้อมูล?"
+          description={`คุณกำลังจะเพิ่มห้อง "${watch("name")}" เข้าสู่ระบบ`}
+          confirmText="ยืนยันบันทึก"
+          onConfirm={handleSubmit(onSubmit)} // สีปกติ
+        />
+      </div>
+    </div>
+  );
+};
+
+export default NewRoomPage;

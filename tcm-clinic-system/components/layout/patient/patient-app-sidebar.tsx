@@ -16,6 +16,8 @@ import {
   Home,
   UserCircle2Icon,
 } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const userSign = {
   title: "TCM CLINIC",
@@ -24,15 +26,17 @@ const userSign = {
 };
 
 const user = {
-  name: "กานตภัท อาจหาญ",
+  name: "Dr. Somchai",
+  role: "Clinic Patient",
 };
 
 const items = [
-  { title: "Home", url: "/", icon: Home },
-  { title: "Room", url: "/map", icon: DoorOpen },
+  { title: "หน้าหลัก", url: "/patient", icon: Home },
+  { title: "ข้อมูลห้อง", url: "/patient/room", icon: DoorOpen },
 ];
 
 export function PatientAppSidebar() {
+  const pathname = usePathname();
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="py-4">
@@ -47,9 +51,11 @@ export function PatientAppSidebar() {
                 <UserCircle2Icon className="size-5" />
               </div>
 
-              {/* User Info - Auto-hides when sidebar is small */}
               <div className="grid flex-1 text-left text-sm leading-tight group-data-[state=collapsed]:hidden">
                 <span className="truncate font-semibold">{user.name}</span>
+                <span className="truncate text-xs text-white/70">
+                  {user.role}
+                </span>
               </div>
               <ChevronsUpDown className="ml-auto size-4 group-data-[state=collapsed]:hidden opacity-50" />
             </SidebarMenuButton>
@@ -58,19 +64,29 @@ export function PatientAppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>{userSign.label}</SidebarGroupLabel>
+          <SidebarGroupLabel>Application</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild tooltip={item.title}>
-                    <a href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </a>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {items.map((item) => {
+                const isActive =
+                  item.url === "/patient"
+                    ? pathname === "/patient"
+                    : pathname.startsWith(item.url);
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      tooltip={item.title}
+                      isActive={isActive}
+                    >
+                      <Link href={item.url}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

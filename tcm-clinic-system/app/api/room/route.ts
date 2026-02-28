@@ -5,7 +5,6 @@ import { NextResponse } from "next/server";
 // [GET ALL]
 export async function GET(req: Request) {
   try {
-    // Query Parameters
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
@@ -13,34 +12,20 @@ export async function GET(req: Request) {
     const status = searchParams.get("status");
 
     const skip = (page - 1) * limit;
-    const validStatuses = ["AVAILABLE", "UNAVAILABLE"];
     const where: Prisma.roomWhereInput = {};
 
-    if (name) {
-      where.name = { contains: name, mode: "insensitive" };
-    }
+    if (name) where.name = { contains: name, mode: "insensitive" };
+    if (status) where.status = status as room_status_enum;
 
-    if (status && validStatuses.includes(status)) {
-      where.status = status as room_status_enum;
-    }
-
-    // Data และ Total Count
     const [rooms, total] = await Promise.all([
       prisma.room.findMany({
-        where: where,
-        skip: skip,
+        where,
+        skip,
         take: limit,
-        orderBy: {
-          name: "asc",
-        },
+        orderBy: { name: "asc" },
       }),
-      prisma.room.count({
-        where: where,
-      }),
+      prisma.room.count({ where }),
     ]);
-
-    // คำนวณข้อมูลสำหรับการทำ UI Pagination
-    const totalPages = Math.ceil(total / limit);
 
     return NextResponse.json({
       data: rooms,
@@ -48,11 +33,10 @@ export async function GET(req: Request) {
         total,
         page,
         limit,
-        totalPages,
+        totalPages: Math.ceil(total / limit),
       },
     });
   } catch (error) {
-    console.error("Get rooms error:", error);
     return NextResponse.json(
       { message: "Internal server error" },
       { status: 500 },
@@ -63,12 +47,11 @@ export async function GET(req: Request) {
 // [CREATE]
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { name, status } = body;
+    const { name, status } = await req.json();
 
     if (!name) {
       return NextResponse.json(
-        { message: "Name is required" },
+        { message: "กรุณากรอกชื่อห้อง" },
         { status: 400 },
       );
     }
@@ -82,9 +65,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json(newRoom, { status: 201 });
   } catch (error) {
-    console.error("Create room error:", error);
     return NextResponse.json(
-      { message: "Internal server error" },
+      { message: "เกิดข้อผิดพลาดในการสร้างข้อมูล" },
       { status: 500 },
     );
   }

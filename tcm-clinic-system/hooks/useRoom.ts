@@ -3,7 +3,7 @@
 import { handleException } from "@/app/utils/handleException";
 import { Room, RoomFormValues, RoomList } from "@/types/room";
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 /* ===============================
    Axios instance
@@ -42,33 +42,28 @@ export const deleteRoom = (id: number) => api.delete(`/room/${id}`);
 ================================ */
 export function useRoom(page = 1, limit = 10, search?: string) {
   const [list, setList] = useState<RoomList | null>(null);
-  const [detail, setDetail] = useState<Room | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchList = async () => {
+  const fetchList = useCallback(async () => {
     try {
       setLoading(true);
       const res = await getRoomList(page, limit, search);
       setList(res.data);
     } catch (err: unknown) {
-      const message = handleException(err, "Failed to fetch room list:");
-      setError(message);
-      console.log(message);
+      setError(handleException(err, "Failed to fetch room list"));
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, limit, search]);
 
   const fetchOne = async (id: number) => {
     try {
       setLoading(true);
       const res = await getRoomById(id);
-      setDetail(res.data);
+      return res.data;
     } catch (err: unknown) {
-      const message = handleException(err, "Failed to fetch room");
-      setError(message);
-      console.log(message);
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -76,16 +71,12 @@ export function useRoom(page = 1, limit = 10, search?: string) {
 
   useEffect(() => {
     fetchList();
-  }, [page, limit, search]);
+  }, [fetchList]);
 
   return {
-    // state
     list,
-    detail,
     loading,
     error,
-
-    // actions
     fetchList,
     fetchOne,
     createRoom,
