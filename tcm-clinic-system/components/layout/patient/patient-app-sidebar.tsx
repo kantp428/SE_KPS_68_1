@@ -24,8 +24,7 @@ const userSign = {
 };
 
 const user = {
-  name: "Dr. Somchai",
-  role: "Clinic Staff",
+  name: "กานตภัท อาจหาญ",
 };
 
 const items = [
@@ -33,7 +32,7 @@ const items = [
   { title: "Room", url: "/map", icon: DoorOpen },
 ];
 
-export function StaffAppSidebar() {
+export function PatientAppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="py-4">
@@ -51,9 +50,6 @@ export function StaffAppSidebar() {
               {/* User Info - Auto-hides when sidebar is small */}
               <div className="grid flex-1 text-left text-sm leading-tight group-data-[state=collapsed]:hidden">
                 <span className="truncate font-semibold">{user.name}</span>
-                <span className="truncate text-xs text-muted-foreground">
-                  {user.role}
-                </span>
               </div>
               <ChevronsUpDown className="ml-auto size-4 group-data-[state=collapsed]:hidden opacity-50" />
             </SidebarMenuButton>
