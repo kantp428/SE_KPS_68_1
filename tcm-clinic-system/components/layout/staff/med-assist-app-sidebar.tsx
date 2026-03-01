@@ -27,15 +27,15 @@ const userSign = {
 
 const user = {
   name: "Dr. Somchai",
-  role: "Clinic Staff",
+  role: "Clinic MedAssist",
 };
 
 const items = [
-  { title: "หน้าหลัก", url: "/staff", icon: Home },
-  { title: "ข้อมูลห้อง", url: "/staff/room", icon: DoorOpen },
+  { title: "หน้าหลัก", url: "/med-assist", icon: Home },
+  { title: "ข้อมูลห้อง", url: "/med-assist/room", icon: DoorOpen },
 ];
 
-export function StaffAppSidebar() {
+export function MedAssistAppSidebar() {
   const pathname = usePathname();
   return (
     <Sidebar collapsible="icon">
@@ -69,8 +69,8 @@ export function StaffAppSidebar() {
             <SidebarMenu>
               {items.map((item) => {
                 const isActive =
-                  item.url === "/staff"
-                    ? pathname === "/staff"
+                  item.url === "/med-assist"
+                    ? pathname === "/med-assist"
                     : pathname.startsWith(item.url);
                 return (
                   <SidebarMenuItem key={item.title}>
