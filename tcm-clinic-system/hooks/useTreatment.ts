@@ -29,13 +29,20 @@ export const getTreatmentList = (
   limit = 10,
   status?: ValidStatus,
   search?: string,
+  listEndpoint = "/treatment",
+  serviceIds?: number[],
+  date?: string,
 ) =>
-  api.get<TreatmentList>("/treatment", {
+  api.get<TreatmentList>(listEndpoint, {
     params: {
       page,
       limit,
       ...(status ? { status: status } : {}),
       ...(search ? { name: search } : {}),
+      ...(serviceIds && serviceIds.length > 0
+        ? { serviceIds: serviceIds.join(",") }
+        : {}),
+      ...(date ? { date } : {}),
     },
   });
 
@@ -56,6 +63,9 @@ export function useTreatment(
   limit = 10,
   status?: ValidStatus,
   search?: string,
+  listEndpoint = "/treatment",
+  serviceIds?: number[],
+  date?: string,
 ) {
   const [list, setList] = useState<TreatmentList | null>(null);
   const [loading, setLoading] = useState(false);
@@ -64,14 +74,22 @@ export function useTreatment(
   const fetchList = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await getTreatmentList(page, limit, status, search);
+      const res = await getTreatmentList(
+        page,
+        limit,
+        status,
+        search,
+        listEndpoint,
+        serviceIds,
+        date,
+      );
       setList(res.data);
     } catch (err: unknown) {
       setError(handleException(err, "Failed to fetch treatment list"));
     } finally {
       setLoading(false);
     }
-  }, [page, limit, search]);
+  }, [page, limit, status, search, listEndpoint, serviceIds, date]);
 
   const fetchOne = async (id: number) => {
     try {

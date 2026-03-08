@@ -15,7 +15,7 @@ export interface Treatment {
   roomName: string;
   date?: string;
   startAt: string;
-  endAt: string; //ถ้า status !== COMPLETE ส่งคาดเดา
+  endAt: string; //ถ้า status !== COMPLETE ส่งคาดเดา start + service time
   status: string;
 }
 
