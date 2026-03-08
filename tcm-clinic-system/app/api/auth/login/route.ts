@@ -55,6 +55,6 @@ export async function POST(req: Request) {
   return NextResponse.json({
     id: account.id,
     username: account.username,
-    full_name: fullName,
+    fullName: fullName,
   });
 }
