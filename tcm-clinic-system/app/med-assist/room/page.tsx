@@ -89,7 +89,7 @@ const RoomPage = () => {
         </div>
 
         {/* เพิ่มปุ่มนี้เข้าไป */}
-        <Button onClick={() => router.push("/staff/room/new")}>
+        <Button onClick={() => router.push("/med-assist/room/new")}>
           + เพิ่มห้องใหม่
         </Button>
       </div>

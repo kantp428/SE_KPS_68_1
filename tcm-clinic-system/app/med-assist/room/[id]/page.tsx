@@ -70,7 +70,7 @@ const EditRoomPage = () => {
         });
       } catch (e) {
         toast.error("ไม่พบข้อมูลห้อง หรือเกิดข้อผิดพลาด");
-        router.push("/staff/room");
+        router.push("/med-assist/room");
       } finally {
         setIsInitialLoading(false);
       }
@@ -98,7 +98,7 @@ const EditRoomPage = () => {
   const currentStatus = watch("status");
 
   const breadcrumbItems = [
-    { label: "จัดการห้อง", href: "/staff/room" },
+    { label: "จัดการห้อง", href: "/med-assist/room" },
     { label: `แก้ไขข้อมูลห้อง [${id}]` },
   ];
 
@@ -107,7 +107,7 @@ const EditRoomPage = () => {
     try {
       await updateRoom(id, data);
       toast.success("แก้ไขข้อมูลสำเร็จ");
-      router.push("/staff/room");
+      router.push("/med-assist/room");
       router.refresh();
     } catch (e: unknown) {
       const errorMessage = handleException(e, "ไม่สามารถแก้ไขข้อมูลได้");
