@@ -1,5 +1,9 @@
 import prisma from "@/lib/prisma";
-import { Prisma, treatment_status_enum } from "@prisma/client";
+import {
+  Prisma,
+  record_status_enum,
+  treatment_status_enum,
+} from "@prisma/client";
 import { NextResponse } from "next/server";
 import { toDate, toHHmm } from "@/app/utils/dateFormat";
 
@@ -143,7 +147,12 @@ export async function POST(req: Request) {
       const [doctor, patient, services, rooms] = await Promise.all([
         prisma.staff.findUnique({ where: { id: doctorId } }),
         prisma.patient.findUnique({ where: { id: patientId } }),
-        prisma.service.findMany({ where: { id: { in: serviceIds } } }),
+        prisma.service.findMany({
+          where: {
+            id: { in: serviceIds },
+            status: record_status_enum.ACTIVE,
+          },
+        }),
         prisma.room.findMany({ where: { id: { in: roomIds } } }),
       ]);
 
@@ -156,7 +165,7 @@ export async function POST(req: Request) {
 
       if (services.length !== new Set(serviceIds).size) {
         return NextResponse.json(
-          { message: "One or more services not found" },
+          { message: "One or more services are unavailable" },
           { status: 404 },
         );
       }
@@ -278,7 +287,12 @@ export async function POST(req: Request) {
       prisma.health_profile.findUnique({ where: { id: healthProfileId } }),
       prisma.staff.findUnique({ where: { id: doctorId } }),
       prisma.patient.findUnique({ where: { id: patientId } }),
-      prisma.service.findUnique({ where: { id: serviceId } }),
+      prisma.service.findFirst({
+        where: {
+          id: serviceId,
+          status: record_status_enum.ACTIVE,
+        },
+      }),
       prisma.room.findUnique({ where: { id: roomId } }),
     ]);
 
