@@ -8,53 +8,81 @@ import { useLogin } from "@/hooks/useLogin";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-
-const loginSchema = z.object({
-    identifier: z.string().min(1, "กรุณากรอกชื่อผู้ใช้งาน หรือ อีเมล"),
-    password: z.string().min(1, "กรุณากรอกรหัสผ่าน"),
-});
-
-type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { login } = useLogin();
 
-    const {
-        register,
-        handleSubmit,
-        formState: { errors },
-    } = useForm<LoginFormValues>({
-        resolver: zodResolver(loginSchema),
-        defaultValues: {
-            identifier: "",
-            password: "",
-        },
-    });
+    // Step states
+    const [thaiId, setThaiId] = useState("");
+    const [idError, setIdError] = useState("");
+    const [isCheckingId, setIsCheckingId] = useState(false);
 
-    const onSubmit = async (data: LoginFormValues) => {
+    // Password Dialog state
+    const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+    const [password, setPassword] = useState("");
+    const [passwordError, setPasswordError] = useState("");
+
+    const handleCheckId = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIdError("");
+
+        if (!thaiId || thaiId.length !== 13) {
+            setIdError("กรุณากรอกรหัสบัตรประชาชน 13 หลัก");
+            return;
+        }
+
+        setIsCheckingId(true);
+        try {
+            const res = await fetch(`/api/patient/check-id/${thaiId}`);
+            if (!res.ok) {
+                toast.error("เกิดข้อผิดพลาดในการตรวจสอบข้อมูล");
+                return;
+            }
+            const data = await res.json();
+
+            // Case 1: Has account -> Prompt for password
+            if (data.exists && data.hasAccount) {
+                setIsPasswordDialogOpen(true);
+                return;
+            }
+
+            // Case 2: No account (exists or new) -> Redirect to register
+            toast.info("ไม่พบบัญชีผู้ใช้งาน กรุณาลงทะเบียน", { duration: 4000 });
+            router.push(`/register?thaiId=${thaiId}`);
+
+        } catch (error) {
+            toast.error("เกิดข้อผิดพลาดในการเชื่อมต่อระบบ");
+        } finally {
+            setIsCheckingId(false);
+        }
+    };
+
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setPasswordError("");
+
+        if (!password) {
+            setPasswordError("กรุณากรอกรหัสผ่าน");
+            return;
+        }
+
         setIsSubmitting(true);
         try {
-            const isEmail = data.identifier.includes("@");
-
             await login({
-                ...(isEmail ? { email: data.identifier } : { username: data.identifier }),
-                password: data.password,
+                username: thaiId, // Using Thai ID as the login identifier
+                password: password,
             });
 
             toast.success("เข้าสู่ระบบสำเร็จ");
-            // Redirect to patient dashboard
+            setIsPasswordDialogOpen(false);
             router.push("/patient");
             router.refresh();
 
-        } catch (e: unknown) {
-            const errorMessage = handleException(e, "ข้อมูลประจำตัวไม่ถูกต้อง หรือเกิดข้อผิดพลาด");
-            toast.error(errorMessage);
+        } catch (error: unknown) {
+            setPasswordError("รหัสผ่านไม่ถูกต้อง");
         } finally {
             setIsSubmitting(false);
         }
@@ -68,33 +96,20 @@ export default function LoginPage() {
                     <p className="text-sm text-muted-foreground">เข้าสู่ระบบเพื่อเข้าใช้งานระบบคลินิก</p>
                 </div>
 
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                <form onSubmit={handleCheckId} className="space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="identifier">ชื่อผู้ใช้งาน หรือ อีเมล</Label>
+                        <Label htmlFor="thaiId">รหัสบัตรประชาชน 13 หลัก</Label>
                         <Input
-                            id="identifier"
-                            placeholder="กรอกชื่อผู้ใช้งาน หรือ อีเมล"
-                            disabled={isSubmitting}
-                            {...register("identifier")}
-                            className={errors.identifier ? "border-destructive focus-visible:ring-destructive" : ""}
+                            id="thaiId"
+                            placeholder="กรอกรหัสบัตรประชาชน"
+                            maxLength={13}
+                            value={thaiId}
+                            onChange={(e) => setThaiId(e.target.value)}
+                            disabled={isCheckingId}
+                            className={idError ? "border-destructive focus-visible:ring-destructive" : ""}
                         />
-                        {errors.identifier && (
-                            <p className="text-xs text-destructive">{errors.identifier.message}</p>
-                        )}
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label htmlFor="password">รหัสผ่าน</Label>
-                        <Input
-                            id="password"
-                            type="password"
-                            placeholder="กรอกรหัสผ่าน"
-                            disabled={isSubmitting}
-                            {...register("password")}
-                            className={errors.password ? "border-destructive focus-visible:ring-destructive" : ""}
-                        />
-                        {errors.password && (
-                            <p className="text-xs text-destructive">{errors.password.message}</p>
+                        {idError && (
+                            <p className="text-xs text-destructive">{idError}</p>
                         )}
                     </div>
 
@@ -102,29 +117,75 @@ export default function LoginPage() {
                         <Button
                             type="submit"
                             className="w-full"
-                            disabled={isSubmitting}
+                            disabled={isCheckingId || thaiId.length !== 13}
                         >
-                            {isSubmitting ? (
+                            {isCheckingId ? (
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             ) : (
-                                "เข้าสู่ระบบ"
+                                "ดำเนินการต่อ"
                             )}
-                        </Button>
-                    </div>
-
-                    <div className="text-center text-sm">
-                        ยังไม่มีบัญชีใช่หรือไม่?{" "}
-                        <Button
-                            variant="link"
-                            className="p-0 h-auto font-semibold"
-                            onClick={() => router.push("/register")}
-                            type="button"
-                        >
-                            ลงทะเบียนผู้ป่วยใหม่
                         </Button>
                     </div>
                 </form>
             </div>
+
+            {/* Password Modal */}
+            {isPasswordDialogOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="w-full max-w-sm rounded-xl border bg-card p-6 shadow-lg animate-in fade-in zoom-in-95 duration-200">
+                        <form onSubmit={handleLogin} className="space-y-4">
+                            <div className="space-y-2">
+                                <h2 className="text-lg font-bold">ยืนยันรหัสผ่าน</h2>
+                                <p className="text-sm text-muted-foreground">กรุณากรอกรหัสผ่านสำหรับรหัสประชาชน {thaiId}</p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="password">รหัสผ่าน</Label>
+                                <Input
+                                    id="password"
+                                    type="password"
+                                    placeholder="กรอกรหัสผ่าน"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    disabled={isSubmitting}
+                                    autoFocus
+                                    className={passwordError ? "border-destructive" : ""}
+                                />
+                                {passwordError && (
+                                    <p className="text-xs text-destructive">{passwordError}</p>
+                                )}
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="flex-1"
+                                    onClick={() => {
+                                        setIsPasswordDialogOpen(false);
+                                        setPassword("");
+                                        setPasswordError("");
+                                    }}
+                                    disabled={isSubmitting}
+                                >
+                                    ยกเลิก
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    className="flex-1"
+                                    disabled={isSubmitting}
+                                >
+                                    {isSubmitting ? (
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    ) : (
+                                        "เข้าสู่ระบบ"
+                                    )}
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

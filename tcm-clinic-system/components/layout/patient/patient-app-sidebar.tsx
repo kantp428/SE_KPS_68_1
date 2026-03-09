@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 
 const userSign = {
   title: "TCM CLINIC",
@@ -25,10 +26,7 @@ const userSign = {
   label: "Application",
 };
 
-const user = {
-  name: "Dr. Somchai",
-  role: "Clinic Patient",
-};
+
 
 const items = [
   { title: "หน้าหลัก", url: "/patient", icon: Home },
@@ -37,6 +35,7 @@ const items = [
 
 export function PatientAppSidebar() {
   const pathname = usePathname();
+  const { user, isLoading } = useAuth() || {};
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="py-4">
@@ -52,9 +51,11 @@ export function PatientAppSidebar() {
               </div>
 
               <div className="grid flex-1 text-left text-sm leading-tight group-data-[state=collapsed]:hidden">
-                <span className="truncate font-semibold">{user.name}</span>
+                <span className="truncate font-semibold">
+                  {isLoading ? "กำลังโหลด..." : (user?.fullName || user?.username || "Guest")}
+                </span>
                 <span className="truncate text-xs text-white/70">
-                  {user.role}
+                  {user?.role || "ผู้ใช้งาน"}
                 </span>
               </div>
               <ChevronsUpDown className="ml-auto size-4 group-data-[state=collapsed]:hidden opacity-50" />

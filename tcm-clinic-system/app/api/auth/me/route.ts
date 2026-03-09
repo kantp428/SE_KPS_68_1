@@ -38,6 +38,7 @@ export async function GET() {
             role: account.account_role,
             fullName: fullName,
         });
+
     } catch (error) {
         console.error("Error fetching user data:", error);
         return NextResponse.json(

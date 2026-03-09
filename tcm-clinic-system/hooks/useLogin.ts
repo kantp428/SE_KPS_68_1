@@ -4,6 +4,7 @@ import { handleException } from "@/app/utils/handleException";
 import { AuthUser, LoginFormValues } from "@/types/auth";
 import axios from "axios";
 import { useCallback, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 
 /* ===============================
    Axios instance
@@ -28,10 +29,12 @@ export const getMe = () => api.get<AuthUser>("/auth/me");
    Hook (stateful)
 ================================ */
 export function useLogin() {
+    const { refreshUser } = useAuth() || {};
     const [user, setUser] = useState<AuthUser | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // Keep fetchMe for backward compatibility if needed, but it should Ideally use context
     const fetchMe = useCallback(async () => {
         try {
             setLoading(true);
@@ -48,6 +51,9 @@ export function useLogin() {
         try {
             setLoading(true);
             const res = await loginUser(payload);
+            if (refreshUser) {
+                await refreshUser();
+            }
             return res.data;
         } catch (err: unknown) {
             throw err;
@@ -61,6 +67,9 @@ export function useLogin() {
             setLoading(true);
             await logoutUser();
             setUser(null);
+            if (refreshUser) {
+                await refreshUser();
+            }
         } catch (err: unknown) {
             throw err;
         } finally {

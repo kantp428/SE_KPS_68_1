@@ -6,7 +6,6 @@ export async function POST(req: Request) {
     try {
         const body = await req.json();
         const {
-            username,
             email,
             password,
             firstName,
@@ -20,22 +19,22 @@ export async function POST(req: Request) {
         } = body;
 
         // 1. Basic validation
-        if (!username || !email || !password || !firstName || !lastName || !thaiId || !birthdate || !gender || !phoneNumber || !bloodGroup) {
+        if (!email || !password || !firstName || !lastName || !thaiId || !birthdate || !gender || !phoneNumber || !bloodGroup) {
             return NextResponse.json(
                 { message: "กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน" },
                 { status: 400 }
             );
         }
 
-        // 2. Check if username, email, or thaiId already exists
+        // 2. Check if username (thaiId) or email already exists
         const existingAccount = await prisma.account.findFirst({
             where: {
-                OR: [{ username }, { email }],
+                OR: [{ username: thaiId }, { email }],
             },
         });
 
         if (existingAccount) {
-            if (existingAccount.username === username) {
+            if (existingAccount.username === thaiId) {
                 return NextResponse.json({ message: "ชื่อผู้ใช้งานนี้ถูกใช้ไปแล้ว" }, { status: 400 });
             }
             return NextResponse.json({ message: "อีเมลนี้ถูกใช้ไปแล้ว" }, { status: 400 });
@@ -57,7 +56,7 @@ export async function POST(req: Request) {
             // Create account
             const newAccount = await tx.account.create({
                 data: {
-                    username,
+                    username: thaiId,
                     email,
                     password_hash: hashedPassword,
                     account_role: "PATIENT",
