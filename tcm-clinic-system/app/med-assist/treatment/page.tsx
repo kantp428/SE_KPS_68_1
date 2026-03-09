@@ -147,7 +147,7 @@ const TreatmentPage = () => {
                 className={cn("w-4 h-4", loading && "animate-spin")}
               />
             </Button>
-            <Button onClick={() => router.push("/med-assist/room/new")}>
+            <Button onClick={() => router.push("/med-assist/treatment/new")}>
               + เพิ่มการบำบัดใหม่
             </Button>
           </div>

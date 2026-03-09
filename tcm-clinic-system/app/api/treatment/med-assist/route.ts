@@ -100,6 +100,144 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    const treatmentItems = Array.isArray(body.treatmentItems)
+      ? (body.treatmentItems as Array<{ serviceId: number; roomId: number }>)
+      : [];
+
+    const healthProfilePayload = body.healthProfile as
+      | {
+          weight: number;
+          height: number;
+          bp: number;
+          symptoms: string;
+          vitals?: Prisma.InputJsonValue;
+        }
+      | undefined;
+
+    if (treatmentItems.length > 0 && healthProfilePayload) {
+      const {
+        doctorId,
+        patientId,
+        startAt,
+        treatmentStatus,
+      } = body as {
+        doctorId?: number;
+        patientId?: number;
+        startAt?: string;
+        treatmentStatus?: treatment_status_enum;
+      };
+
+      if (!doctorId || !patientId || !startAt) {
+        return NextResponse.json(
+          {
+            message:
+              "doctorId, patientId, startAt, healthProfile, and treatmentItems are required",
+          },
+          { status: 400 },
+        );
+      }
+
+      const serviceIds = treatmentItems.map((item) => item.serviceId);
+      const roomIds = treatmentItems.map((item) => item.roomId);
+
+      const [doctor, patient, services, rooms] = await Promise.all([
+        prisma.staff.findUnique({ where: { id: doctorId } }),
+        prisma.patient.findUnique({ where: { id: patientId } }),
+        prisma.service.findMany({ where: { id: { in: serviceIds } } }),
+        prisma.room.findMany({ where: { id: { in: roomIds } } }),
+      ]);
+
+      if (!doctor || !patient) {
+        return NextResponse.json(
+          { message: "Doctor or patient not found" },
+          { status: 404 },
+        );
+      }
+
+      if (services.length !== new Set(serviceIds).size) {
+        return NextResponse.json(
+          { message: "One or more services not found" },
+          { status: 404 },
+        );
+      }
+
+      if (rooms.length !== new Set(roomIds).size) {
+        return NextResponse.json(
+          { message: "One or more rooms not found" },
+          { status: 404 },
+        );
+      }
+
+      const scheduleDate =
+        /^\d{4}-\d{2}-\d{2}T/.test(startAt)
+          ? startAt.slice(0, 10)
+          : new Date(startAt).toISOString().slice(0, 10);
+      const scheduleStart = new Date(`${scheduleDate}T00:00:00`);
+      const scheduleEnd = new Date(`${scheduleDate}T23:59:59.999`);
+      const schedule = await prisma.work_schedule.findFirst({
+        where: {
+          staff_id: doctorId,
+          is_active: true,
+          date: { gte: scheduleStart, lte: scheduleEnd },
+        },
+      });
+
+      if (!schedule) {
+        return NextResponse.json(
+          { message: "Selected doctor has no active work schedule on this date" },
+          { status: 400 },
+        );
+      }
+
+      const serviceDurationMap = new Map(
+        services.map((service) => [service.id, service.duration_minute]),
+      );
+
+      const created = await prisma.$transaction(async (tx) => {
+        const healthProfile = await tx.health_profile.create({
+          data: {
+            patient_id: patientId,
+            weight: healthProfilePayload.weight,
+            height: healthProfilePayload.height,
+            bp: healthProfilePayload.bp,
+            symptoms: healthProfilePayload.symptoms,
+            vitals: healthProfilePayload.vitals || {},
+          },
+        });
+
+        let currentStart = new Date(startAt);
+        const treatments = [];
+
+        for (const item of treatmentItems) {
+          const duration = serviceDurationMap.get(item.serviceId) || 0;
+
+          const treatment = await tx.treatment.create({
+            data: {
+              health_profile_id: healthProfile.id,
+              doctor_id: doctorId,
+              patient_id: patientId,
+              service_id: item.serviceId,
+              room_id: item.roomId,
+              treatment_status:
+                treatmentStatus || treatment_status_enum.IN_PROGRESS,
+              start_at: currentStart,
+              end_at: null,
+            },
+          });
+
+          treatments.push(treatment);
+          currentStart = new Date(currentStart.getTime() + duration * 60_000);
+        }
+
+        return {
+          healthProfile,
+          treatments,
+        };
+      });
+
+      return NextResponse.json(created, { status: 201 });
+    }
+
     const {
       healthProfileId,
       doctorId,
