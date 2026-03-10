@@ -15,6 +15,7 @@ import {
   HeartPulse,
   Home,
   UserCircle2Icon,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -33,6 +34,7 @@ const user = {
 const items = [
   { title: "หน้าหลัก", url: "/med-assist", icon: Home },
   { title: "ข้อมูลห้อง", url: "/med-assist/room", icon: DoorOpen },
+  { title: "รายชื่อคนไข้", url: "/med-assist/patients", icon: Users },
 ];
 
 export function MedAssistAppSidebar() {

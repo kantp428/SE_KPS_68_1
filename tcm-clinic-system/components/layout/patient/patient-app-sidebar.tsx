@@ -32,7 +32,7 @@ const user = {
 
 const items = [
   { title: "หน้าหลัก", url: "/patient", icon: Home },
-  { title: "ข้อมูลห้อง", url: "/patient/room", icon: DoorOpen },
+  { title: "ข้อมูลส่วนตัว", url: "/patient/profile", icon: UserCircle2Icon },
 ];
 
 export function PatientAppSidebar() {
