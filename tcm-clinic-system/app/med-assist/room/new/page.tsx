@@ -79,7 +79,7 @@ const NewRoomPage = () => {
   const currentStatus = watch("status");
 
   const breadcrumbItems = [
-    { label: "จัดการห้อง", href: "/staff/room" },
+    { label: "จัดการห้อง", href: "/med-assist/room" },
     { label: "เพิ่มข้อมูลห้อง" },
   ];
 
@@ -88,7 +88,7 @@ const NewRoomPage = () => {
     try {
       await createRoom(data);
       toast.success("สร้างห้องสำเร็จ");
-      router.push("/staff/room");
+      router.push("/med-assist/room");
       router.refresh();
     } catch (e: unknown) {
       const errorMessage = handleException(e, "ไม่สามารถสร้างห้องได้");
