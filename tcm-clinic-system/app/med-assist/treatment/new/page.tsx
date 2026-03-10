@@ -18,34 +18,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useDebounce } from "@/hooks/use-debounce";
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
 import { format } from "date-fns";
-import { Clock3, Plus, Trash2 } from "lucide-react";
+import { Clock3, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Controller, useFieldArray, useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
 
 const api = axios.create({
   baseURL: `${process.env.NEXT_PUBLIC_API_BASE_URL}`,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  headers: { "Content-Type": "application/json" },
 });
 
 const optionalNumber = z.preprocess((value) => {
-  if (value === "" || value === null || Number.isNaN(value)) {
-    return undefined;
-  }
+  if (value === "" || value === null || Number.isNaN(value)) return undefined;
   return value;
 }, z.number().optional());
 
 const formSchema = z.object({
   patientId: z.number().int().positive("กรุณาเลือกคนไข้"),
   doctorId: z.number().int().positive("กรุณาเลือกแพทย์"),
+  roomId: z.number().int().positive("กรุณาเลือกห้อง"),
   startAt: z.string().min(1, "กรุณาเลือกเวลาเริ่ม"),
   healthProfile: z.object({
     weight: z.number().positive("น้ำหนักต้องมากกว่า 0"),
@@ -57,26 +55,13 @@ const formSchema = z.object({
     respiratoryRate: optionalNumber,
     oxygenSaturation: optionalNumber,
   }),
-  treatmentItems: z
-    .array(
-      z.object({
-        serviceId: z.number().int().positive("กรุณาเลือกบริการ"),
-        roomId: z.number().int().positive("กรุณาเลือกห้อง"),
-      }),
-    )
-    .min(1, "กรุณาเพิ่มรายการอย่างน้อย 1 รายการ"),
 });
 
 type FormValues = z.output<typeof formSchema>;
 type FormValuesInput = z.input<typeof formSchema>;
 
 type Option = { value: number; label: string };
-
-type PatientOption = Option & {
-  thaiId: string;
-  bookingAt: string | null;
-};
-
+type PatientOption = Option & { thaiId: string; bookingAt: string | null };
 type PatientDetail = {
   id: number;
   fullName: string;
@@ -94,18 +79,13 @@ const getAge = (birthdate: string) => {
   if (Number.isNaN(dob.getTime())) return "-";
   const today = new Date();
   let age = today.getFullYear() - dob.getFullYear();
-  const monthDiff = today.getMonth() - dob.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
-    age -= 1;
-  }
+  const m = today.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age -= 1;
   return `${age} ปี`;
 };
 
-const formatGenderThai = (gender: string) => {
-  if (gender === "MALE") return "ชาย";
-  if (gender === "FEMALE") return "หญิง";
-  return gender || "-";
-};
+const formatGenderThai = (g: string) =>
+  g === "MALE" ? "ชาย" : g === "FEMALE" ? "หญิง" : g || "-";
 
 const hourOptions = Array.from({ length: 24 }, (_, i) =>
   i.toString().padStart(2, "0"),
@@ -123,7 +103,6 @@ const NewTreatmentPage = () => {
     null,
   );
   const [doctorOptions, setDoctorOptions] = useState<Option[]>([]);
-  const [serviceOptions, setServiceOptions] = useState<Option[]>([]);
   const [roomOptions, setRoomOptions] = useState<Option[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -140,6 +119,7 @@ const NewTreatmentPage = () => {
     defaultValues: {
       patientId: 0,
       doctorId: 0,
+      roomId: 0,
       startAt: format(new Date(), "HH:mm"),
       healthProfile: {
         weight: undefined,
@@ -151,93 +131,61 @@ const NewTreatmentPage = () => {
         respiratoryRate: undefined,
         oxygenSaturation: undefined,
       },
-      treatmentItems: [{ serviceId: 0, roomId: 0 }],
     },
-  });
-
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "treatmentItems",
   });
 
   const selectedPatientId = watch("patientId");
   const startAt = watch("startAt");
+  const selectedTime = useMemo(
+    () => startAt || format(new Date(), "HH:mm"),
+    [startAt],
+  );
 
-  const selectedTime = useMemo(() => {
-    if (!startAt) return format(new Date(), "HH:mm");
-    return startAt;
-  }, [startAt]);
-
+  // ── Fetch patient options ──
   useEffect(() => {
-    const run = async () => {
-      try {
-        const res = await api.get("/treatment/med-assist/patient-options", {
-          params: { search: debouncedPatientSearch, limit: 20 },
-        });
-        setPatientOptions(res.data?.data || []);
-      } catch {
-        setPatientOptions([]);
-      }
-    };
-    run();
+    api
+      .get("/treatment/med-assist/patient-options", {
+        params: { search: debouncedPatientSearch, limit: 20 },
+      })
+      .then((r) => setPatientOptions(r.data?.data || []))
+      .catch(() => setPatientOptions([]));
   }, [debouncedPatientSearch]);
 
+  // ── Fetch patient detail ──
   useEffect(() => {
-    const run = async () => {
-      if (!selectedPatientId || selectedPatientId <= 0) {
-        setPatientDetail(null);
-        return;
-      }
-      try {
-        const res = await api.get(
-          `/treatment/med-assist/patient/${selectedPatientId}`,
-        );
-        setPatientDetail(res.data?.data || null);
-      } catch {
-        setPatientDetail(null);
-      }
-    };
-    run();
+    if (!selectedPatientId || selectedPatientId <= 0) {
+      setPatientDetail(null);
+      return;
+    }
+    api
+      .get(`/treatment/med-assist/patient/${selectedPatientId}`)
+      .then((r) => setPatientDetail(r.data?.data || null))
+      .catch(() => setPatientDetail(null));
   }, [selectedPatientId]);
 
+  // ── Fetch doctor options (by time) ──
   useEffect(() => {
-    const run = async () => {
-      try {
-        const res = await api.get("/treatment/med-assist/doctor-options", {
-          params: { time: selectedTime },
-        });
-        setDoctorOptions(res.data?.data || []);
-      } catch {
-        setDoctorOptions([]);
-      }
-    };
-    run();
+    api
+      .get("/treatment/med-assist/doctor-options", {
+        params: { time: selectedTime },
+      })
+      .then((r) => setDoctorOptions(r.data?.data || []))
+      .catch(() => setDoctorOptions([]));
   }, [selectedTime]);
 
+  // ── Fetch room options ──
   useEffect(() => {
-    const run = async () => {
-      try {
-        const [serviceRes, roomRes] = await Promise.all([
-          api.get("/service/options", { params: { limit: 100, page: 1 } }),
-          api.get("/room", {
-            params: { limit: 100, page: 1, status: "AVAILABLE" },
-          }),
-        ]);
-        setServiceOptions(serviceRes.data?.data || []);
+    api
+      .get("/room", { params: { limit: 100, page: 1, status: "AVAILABLE" } })
+      .then((r) =>
         setRoomOptions(
-          (roomRes.data?.data || []).map(
-            (room: { id: number; name: string }) => ({
-              value: room.id,
-              label: room.name,
-            }),
-          ),
-        );
-      } catch {
-        setServiceOptions([]);
-        setRoomOptions([]);
-      }
-    };
-    run();
+          (r.data?.data || []).map((room: { id: number; name: string }) => ({
+            value: room.id,
+            label: room.name,
+          })),
+        ),
+      )
+      .catch(() => setRoomOptions([]));
   }, []);
 
   const onSubmit = async (values: FormValues) => {
@@ -246,6 +194,7 @@ const NewTreatmentPage = () => {
       await api.post("/treatment/med-assist", {
         patientId: values.patientId,
         doctorId: values.doctorId,
+        roomId: values.roomId,
         startAt: `${format(new Date(), "yyyy-MM-dd")}T${values.startAt}:00`,
         healthProfile: {
           weight: values.healthProfile.weight,
@@ -259,7 +208,6 @@ const NewTreatmentPage = () => {
             oxygenSaturation: values.healthProfile.oxygenSaturation ?? null,
           },
         },
-        treatmentItems: values.treatmentItems,
       });
 
       toast.success("สร้างข้อมูลการบำบัดสำเร็จ");
@@ -273,7 +221,7 @@ const NewTreatmentPage = () => {
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-6">
+    <div className="mx-auto max-w-3xl space-y-6 p-6">
       <BreadcrumbCustom
         items={[
           { label: "การบำบัด", href: "/med-assist/treatment" },
@@ -284,381 +232,367 @@ const NewTreatmentPage = () => {
       <h1 className="text-2xl font-bold tracking-tight">เพิ่มการบำบัดใหม่</h1>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <div className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">1) เลือกคนไข้</h2>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>ค้นหาคนไข้ (ชื่อ / Thai ID)</Label>
-              <Input
-                placeholder="พิมพ์ชื่อหรือเลขบัตรประชาชน"
-                className="h-10"
-                value={patientSearch}
-                onChange={(e) => setPatientSearch(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>คนไข้</Label>
-              <Controller
-                control={control}
-                name="patientId"
-                render={({ field }) => (
-                  <Select
-                    value={field.value > 0 ? String(field.value) : ""}
-                    onValueChange={(value) => field.onChange(Number(value))}
-                  >
-                    <SelectTrigger className="w-full max-w-full overflow-hidden">
-                      <SelectValue
-                        placeholder="เลือกคนไข้"
-                        className="block max-w-[calc(100vw-8rem)] truncate text-left"
-                      />
-                    </SelectTrigger>
-                    <SelectContent className="max-w-[calc(100vw-2rem)]">
-                      {patientOptions.map((option) => (
-                        <SelectItem
-                          key={option.value}
-                          value={String(option.value)}
-                          className="whitespace-normal wrap-break-word"
-                        >
-                          {option.label} | {option.thaiId}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+        {/* ── 1) เลือกคนไข้ ── */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">1) เลือกคนไข้</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>ค้นหาคนไข้ (ชื่อ / Thai ID)</Label>
+                <Input
+                  placeholder="พิมพ์ชื่อหรือเลขบัตรประชาชน"
+                  value={patientSearch}
+                  onChange={(e) => setPatientSearch(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>คนไข้</Label>
+                <Controller
+                  control={control}
+                  name="patientId"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value > 0 ? String(field.value) : ""}
+                      onValueChange={(v) => field.onChange(Number(v))}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="เลือกคนไข้" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {patientOptions.map((o) => (
+                          <SelectItem key={o.value} value={String(o.value)}>
+                            {o.label} | {o.thaiId}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.patientId && (
+                  <p className="text-xs text-destructive">
+                    {errors.patientId.message}
+                  </p>
                 )}
+              </div>
+            </div>
+
+            {/* Patient detail card */}
+            {patientDetail && (
+              <Card className="border-dashed bg-muted/30">
+                <CardContent className="pt-4">
+                  <div className="grid gap-2 md:grid-cols-3 text-sm">
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        ชื่อ-นามสกุล
+                      </p>
+                      <p className="font-medium">{patientDetail.fullName}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        เลขบัตรประชาชน
+                      </p>
+                      <p className="font-medium">{patientDetail.thaiId}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">อายุ</p>
+                      <p className="font-medium">
+                        {getAge(patientDetail.birthdate)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">เพศ</p>
+                      <p className="font-medium">
+                        {formatGenderThai(patientDetail.gender)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        กรุ๊ปเลือด
+                      </p>
+                      <p className="font-medium">{patientDetail.bloodGroup}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        โรคประจำตัว
+                      </p>
+                      <p className="font-medium">
+                        {patientDetail.chronicDisease || "ไม่มีข้อมูล"}
+                      </p>
+                    </div>
+                    <div className="md:col-span-3">
+                      <p className="text-xs text-muted-foreground">
+                        การจองวันนี้
+                      </p>
+                      <p className="font-medium">
+                        {patientDetail.bookingAt
+                          ? format(
+                              new Date(patientDetail.bookingAt),
+                              "dd/MM/yyyy HH:mm",
+                            )
+                          : "ไม่มีการจอง"}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ── 2) Health Profile ── */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">2) กรอก Health Profile</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label>น้ำหนัก (kg)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  {...register("healthProfile.weight", { valueAsNumber: true })}
+                />
+                {errors.healthProfile?.weight && (
+                  <p className="text-xs text-destructive">
+                    {errors.healthProfile.weight.message}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>ส่วนสูง (cm)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  {...register("healthProfile.height", { valueAsNumber: true })}
+                />
+                {errors.healthProfile?.height && (
+                  <p className="text-xs text-destructive">
+                    {errors.healthProfile.height.message}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>ความดันโลหิต (mmHg)</Label>
+                <Input
+                  type="number"
+                  {...register("healthProfile.bp", { valueAsNumber: true })}
+                />
+                {errors.healthProfile?.bp && (
+                  <p className="text-xs text-destructive">
+                    {errors.healthProfile.bp.message}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>อุณหภูมิ (°C)</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  {...register("healthProfile.temperature", {
+                    valueAsNumber: true,
+                  })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>ชีพจร (ครั้ง/นาที)</Label>
+                <Input
+                  type="number"
+                  {...register("healthProfile.pulse", { valueAsNumber: true })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>อัตราการหายใจ (ครั้ง/นาที)</Label>
+                <Input
+                  type="number"
+                  {...register("healthProfile.respiratoryRate", {
+                    valueAsNumber: true,
+                  })}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>อาการ</Label>
+              <Input
+                {...register("healthProfile.symptoms")}
+                placeholder="กรอกอาการของผู้ป่วย"
               />
-              {errors.patientId && (
+              {errors.healthProfile?.symptoms && (
                 <p className="text-xs text-destructive">
-                  {errors.patientId.message}
+                  {errors.healthProfile.symptoms.message}
                 </p>
               )}
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          <Card className="border-dashed">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">2) ข้อมูลคนไข้</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm">
-              {patientDetail ? (
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div className="rounded-md bg-muted/40 p-3">
-                    <p className="text-muted-foreground text-xs">
-                      ชื่อ-นามสกุล
-                    </p>
-                    <p className="font-medium">{patientDetail.fullName}</p>
-                  </div>
-                  <div className="rounded-md bg-muted/40 p-3">
-                    <p className="text-muted-foreground text-xs">
-                      เลขบัตรประชาชน
-                    </p>
-                    <p className="font-medium">{patientDetail.thaiId}</p>
-                  </div>
-                  <div className="rounded-md bg-muted/40 p-3">
-                    <p className="text-muted-foreground text-xs">เพศ</p>
-                    <p className="font-medium">
-                      {formatGenderThai(patientDetail.gender)}
-                    </p>
-                  </div>
-                  <div className="rounded-md bg-muted/40 p-3">
-                    <p className="text-muted-foreground text-xs">อายุ</p>
-                    <p className="font-medium">
-                      {getAge(patientDetail.birthdate)}
-                    </p>
-                  </div>
-                  <div className="rounded-md bg-muted/40 p-3">
-                    <p className="text-muted-foreground text-xs">กรุ๊ปเลือด</p>
-                    <p className="font-medium">{patientDetail.bloodGroup}</p>
-                  </div>
-                  <div className="rounded-md bg-muted/40 p-3">
-                    <p className="text-muted-foreground text-xs">โรคประจำตัว</p>
-                    <p className="font-medium">
-                      {patientDetail.chronicDisease || "ไม่มีข้อมูล"}
-                    </p>
-                  </div>
-                  <div className="rounded-md bg-muted/40 p-3 md:col-span-2">
-                    <p className="text-muted-foreground text-xs">
-                      การจองวันนี้
-                    </p>
-                    <p className="font-medium">
-                      {patientDetail.bookingAt
-                        ? format(
-                            new Date(patientDetail.bookingAt),
-                            "dd/MM/yyyy HH:mm",
-                          )
-                        : "ไม่มีการจอง"}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-muted-foreground">ยังไม่ได้เลือกคนไข้</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        {/* ── 3) แพทย์ + เวลา ── */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">3) เลือกแพทย์และเวลา</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>เวลาเริ่ม</Label>
+                <Controller
+                  control={control}
+                  name="startAt"
+                  render={({ field }) => {
+                    const [hour = "00", minute = "00"] = (
+                      field.value || "00:00"
+                    ).split(":");
+                    return (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full justify-start font-normal"
+                          >
+                            <Clock3 className="mr-2 h-4 w-4" />
+                            {field.value || "เลือกเวลา"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-3">
+                          <div className="flex items-center gap-2">
+                            <Select
+                              value={hour}
+                              onValueChange={(h) =>
+                                field.onChange(`${h}:${minute}`)
+                              }
+                            >
+                              <SelectTrigger className="w-24">
+                                <SelectValue placeholder="HH" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {hourOptions.map((h) => (
+                                  <SelectItem key={h} value={h}>
+                                    {h}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <span className="text-muted-foreground text-sm">
+                              :
+                            </span>
+                            <Select
+                              value={minute}
+                              onValueChange={(m) =>
+                                field.onChange(`${hour}:${m}`)
+                              }
+                            >
+                              <SelectTrigger className="w-24">
+                                <SelectValue placeholder="MM" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {minuteOptions.map((m) => (
+                                  <SelectItem key={m} value={m}>
+                                    {m}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    );
+                  }}
+                />
+                {errors.startAt && (
+                  <p className="text-xs text-destructive">
+                    {errors.startAt.message}
+                  </p>
+                )}
+              </div>
 
-        <div className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">3) กรอก Health Profile ใหม่</h2>
+              <div className="space-y-2">
+                <Label>แพทย์</Label>
+                <Controller
+                  control={control}
+                  name="doctorId"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value > 0 ? String(field.value) : ""}
+                      onValueChange={(v) => field.onChange(Number(v))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="เลือกแพทย์" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {doctorOptions.map((o) => (
+                          <SelectItem key={o.value} value={String(o.value)}>
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.doctorId && (
+                  <p className="text-xs text-destructive">
+                    {errors.doctorId.message}
+                  </p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-          <div className="grid gap-4 md:grid-cols-3">
+        {/* ── 4) บริการ + ห้อง ── */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">4) บริการและห้อง</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Locked service */}
             <div className="space-y-2">
-              <Label>น้ำหนัก (kg)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                {...register("healthProfile.weight", { valueAsNumber: true })}
-              />
+              <Label>บริการ</Label>
+              <div className="flex h-10 items-center gap-2 rounded-md border bg-muted/40 px-3 text-sm text-muted-foreground">
+                <Lock className="h-3.5 w-3.5 shrink-0" />
+                <span>ตรวจวินิจฉัย (Initial Consultation)</span>
+                <Badge variant="secondary" className="ml-auto text-xs">
+                  กำหนดโดยระบบ
+                </Badge>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>ส่วนสูง (cm)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                {...register("healthProfile.height", { valueAsNumber: true })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>BP</Label>
-              <Input
-                type="number"
-                {...register("healthProfile.bp", { valueAsNumber: true })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>อุณหภูมิ</Label>
-              <Input
-                type="number"
-                step="0.1"
-                {...register("healthProfile.temperature", {
-                  valueAsNumber: true,
-                })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>ชีพจร</Label>
-              <Input
-                type="number"
-                {...register("healthProfile.pulse", { valueAsNumber: true })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>อัตราการหายใจ</Label>
-              <Input
-                type="number"
-                {...register("healthProfile.respiratoryRate", {
-                  valueAsNumber: true,
-                })}
-              />
-            </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label>อาการ</Label>
-            <Input
-              {...register("healthProfile.symptoms")}
-              placeholder="กรอกอาการของผู้ป่วย"
-            />
-          </div>
-        </div>
-
-        <div className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">4) เลือกแพทย์จากตารางงาน</h2>
-
-          <div className="grid gap-4 md:grid-cols-2">
+            {/* Room select */}
             <div className="space-y-2">
-              <Label>เวลาเริ่ม</Label>
+              <Label>ห้อง</Label>
               <Controller
                 control={control}
-                name="startAt"
-                render={({ field }) => {
-                  const [hour = "00", minute = "00"] = (
-                    field.value || "00:00"
-                  ).split(":");
-                  return (
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="w-full justify-start font-normal"
-                        >
-                          <Clock3 className="mr-2 h-4 w-4" />
-                          {field.value || "เลือกเวลา"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-3">
-                        <div className="flex items-center gap-2">
-                          <Select
-                            value={hour}
-                            onValueChange={(nextHour) =>
-                              field.onChange(`${nextHour}:${minute}`)
-                            }
-                          >
-                            <SelectTrigger className="w-24">
-                              <SelectValue placeholder="HH" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {hourOptions.map((h) => (
-                                <SelectItem key={h} value={h}>
-                                  {h}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <span className="text-muted-foreground text-sm">
-                            :
-                          </span>
-                          <Select
-                            value={minute}
-                            onValueChange={(nextMinute) =>
-                              field.onChange(`${hour}:${nextMinute}`)
-                            }
-                          >
-                            <SelectTrigger className="w-24">
-                              <SelectValue placeholder="MM" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {minuteOptions.map((m) => (
-                                <SelectItem key={m} value={m}>
-                                  {m}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  );
-                }}
-              />
-              {errors.startAt && (
-                <p className="text-xs text-destructive">
-                  {errors.startAt.message}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label>แพทย์</Label>
-              <Controller
-                control={control}
-                name="doctorId"
+                name="roomId"
                 render={({ field }) => (
                   <Select
                     value={field.value > 0 ? String(field.value) : ""}
-                    onValueChange={(value) => field.onChange(Number(value))}
+                    onValueChange={(v) => field.onChange(Number(v))}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="เลือกแพทย์" />
+                      <SelectValue placeholder="เลือกห้อง" />
                     </SelectTrigger>
                     <SelectContent>
-                      {doctorOptions.map((option) => (
-                        <SelectItem
-                          key={option.value}
-                          value={String(option.value)}
-                        >
-                          {option.label}
+                      {roomOptions.map((o) => (
+                        <SelectItem key={o.value} value={String(o.value)}>
+                          {o.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 )}
               />
-              {errors.doctorId && (
+              {errors.roomId && (
                 <p className="text-xs text-destructive">
-                  {errors.doctorId.message}
+                  {errors.roomId.message}
                 </p>
               )}
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">5) เลือกหลายบริการและห้อง</h2>
-
-          <div className="space-y-3">
-            {fields.map((fieldItem, index) => (
-              <div
-                key={fieldItem.id}
-                className="grid items-end gap-3 md:grid-cols-[1fr_1fr_auto]"
-              >
-                <div className="space-y-2">
-                  <Label>บริการ #{index + 1}</Label>
-                  <Controller
-                    control={control}
-                    name={`treatmentItems.${index}.serviceId`}
-                    render={({ field }) => (
-                      <Select
-                        value={field.value > 0 ? String(field.value) : ""}
-                        onValueChange={(value) => field.onChange(Number(value))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="เลือกบริการ" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {serviceOptions.map((option) => (
-                            <SelectItem
-                              key={option.value}
-                              value={String(option.value)}
-                            >
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>ห้อง #{index + 1}</Label>
-                  <Controller
-                    control={control}
-                    name={`treatmentItems.${index}.roomId`}
-                    render={({ field }) => (
-                      <Select
-                        value={field.value > 0 ? String(field.value) : ""}
-                        onValueChange={(value) => field.onChange(Number(value))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="เลือกห้อง" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {roomOptions.map((option) => (
-                            <SelectItem
-                              key={option.value}
-                              value={String(option.value)}
-                            >
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                </div>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => remove(index)}
-                  disabled={fields.length <= 1}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
-
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => append({ serviceId: 0, roomId: 0 })}
-          >
-            <Plus className="mr-2 h-4 w-4" /> เพิ่มบริการ + ห้อง
-          </Button>
-        </div>
-
+        {/* ── Actions ── */}
         <div className="flex gap-3">
           <Button
             type="button"

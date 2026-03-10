@@ -1,4 +1,5 @@
 "use client";
+import { HealthProfileDialog } from "@/components/custom/health-profile-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -56,7 +57,7 @@ import {
   Search,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 const TreatmentPage = () => {
@@ -64,7 +65,9 @@ const TreatmentPage = () => {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [limit] = useState(10);
-  const [tab, setTab] = useState<ValidStatus>("IN_PROGRESS");
+  const [tab, setTab] = useState<"OBSERVE" | "IN_PROGRESS" | "COMPLETED">(
+    "OBSERVE",
+  );
 
   // Search States
   const [nameSearch, setNameSearch] = useState("");
@@ -73,6 +76,14 @@ const TreatmentPage = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedServices, setSelectedServices] = useState<number[]>([]);
   const [openService, setOpenService] = useState(false);
+
+  const [open, setOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+
+  const handleOpen = (id: number) => {
+    setSelectedId(id);
+    setOpen(true);
+  };
 
   const toggleService = (value: number) => {
     setSelectedServices((current) =>
@@ -90,9 +101,10 @@ const TreatmentPage = () => {
   const { list, loading, fetchList } = useTreatment(
     currentPage,
     limit,
-    tab,
+    tab === "OBSERVE" ? "IN_PROGRESS" : tab,
     debouncedNameSearch,
     "/treatment/med-assist",
+    tab === "OBSERVE" ? true : false,
     selectedServices,
     selectedDateParam,
   );
@@ -109,6 +121,13 @@ const TreatmentPage = () => {
     }
   };
 
+  useEffect(() => {
+    if (tab === "OBSERVE") {
+      setSelectedServices([]);
+      setSelectedDate(undefined);
+    }
+  }, [tab]);
+
   const totalPages = list?.pagination?.totalPages || 1;
 
   return (
@@ -123,16 +142,16 @@ const TreatmentPage = () => {
           <Tabs
             value={tab}
             onValueChange={(v) => {
-              setTab(v as ValidStatus);
+              setTab(v as "OBSERVE" | "IN_PROGRESS" | "COMPLETED");
               setCurrentPage(1);
               setServiceSearch("");
             }}
             className="w-full lg:w-auto"
           >
             <TabsList>
+              <TabsTrigger value="OBSERVE">รอตรวจวินิจฉัย</TabsTrigger>
               <TabsTrigger value="IN_PROGRESS">กำลังดำเนินการ</TabsTrigger>
               <TabsTrigger value="COMPLETED">ดำเนินการสำเร็จ</TabsTrigger>
-              <TabsTrigger value="FOLLOW_UP">เฝ้าติดตาม</TabsTrigger>
             </TabsList>
           </Tabs>
 
@@ -165,8 +184,7 @@ const TreatmentPage = () => {
             />
           </div>
 
-          {/* แสดงเฉพาะ COMPLETE และ FOLLOW_UP */}
-          {(tab === "COMPLETED" || tab === "FOLLOW_UP") && (
+          {(tab === "COMPLETED" || tab === "IN_PROGRESS") && (
             <>
               {/* Multi-select Dropdown สำหรับบริการ */}
               <div className="flex items-center gap-2">
@@ -308,12 +326,12 @@ const TreatmentPage = () => {
               <TableHead className="text-center min-w-30">บริการ</TableHead>
               <TableHead className="text-center min-w-30">ห้อง</TableHead>
               <TableHead className="w-28 text-center">เวลาเริ่ม</TableHead>
-              {tab === "IN_PROGRESS" && (
+              {tab !== "COMPLETED" && (
                 <TableHead className="w-28 text-center">
                   เวลาคาดว่าจะจบ
                 </TableHead>
               )}
-              {tab !== "IN_PROGRESS" && (
+              {tab === "COMPLETED" && (
                 <>
                   <TableHead className="w-28 text-center">เวลาจบ</TableHead>
                 </>
@@ -394,7 +412,7 @@ const TreatmentPage = () => {
                             size="icon"
                             variant="ghost"
                             className="text-destructive"
-                            onClick={() => {}}
+                            onClick={() => handleOpen(l.healthProfileId)}
                           >
                             <ClipboardPlus className="w-4 h-4" />
                           </Button>
@@ -461,6 +479,12 @@ const TreatmentPage = () => {
               </PaginationItem>
             </PaginationContent>
           </Pagination>
+
+          <HealthProfileDialog
+            id={selectedId}
+            open={open}
+            onOpenChange={setOpen}
+          />
         </div>
       </div>
     </div>
