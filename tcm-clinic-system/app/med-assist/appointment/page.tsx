@@ -41,10 +41,12 @@ import {
     XCircle,
     CheckCircle2,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
 const MedAssistAppointmentPage = () => {
+    const router = useRouter();
     const [currentPage, setCurrentPage] = useState(1);
     const [limit] = useState(10);
     const [tab, setTab] = useState<string>("CONFIRMED");
@@ -58,7 +60,8 @@ const MedAssistAppointmentPage = () => {
         ? format(selectedDate, "yyyy-MM-dd")
         : undefined;
 
-    const { list, loading, error, fetchList, updateStatus } = useMedAssistAppointment(
+    const { list, loading, error, fetchList, //updateStatus 
+    } = useMedAssistAppointment(
         currentPage,
         limit,
         tab,
@@ -72,15 +75,6 @@ const MedAssistAppointmentPage = () => {
             toast.success("อัปเดตข้อมูลเรียบร้อยแล้ว");
         } catch (err) {
             toast.error("รีเฟรชล้มเหลว");
-        }
-    };
-
-    const handleStatusChange = async (id: number, newStatus: appointment_status_enum) => {
-        try {
-            await updateStatus(id, newStatus);
-            toast.success("เปลี่ยนสถานะการจองสำเร็จ");
-        } catch (err) {
-            toast.error("ไม่สามารถเปลี่ยนสถานะได้");
         }
     };
 
@@ -273,24 +267,12 @@ const MedAssistAppointmentPage = () => {
                                         {l.status === "CONFIRMED" ? (
                                             <div className="flex items-center justify-center gap-2">
                                                 <Button
-                                                    variant="outline"
                                                     size="sm"
-                                                    onClick={() => handleStatusChange(l.id, "COMPLETED")}
-                                                    className="h-8 text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700"
-                                                    title="เสร็จสิ้นการบำบัด"
+                                                    onClick={() => router.push(`/med-assist/treatment/new?appointmentId=${l.id}&patientId=${l.patientId}`)}
+                                                    className="h-8"
+                                                    title="จัดการข้อมูล"
                                                 >
-                                                    <CheckCircle2 className="h-4 w-4 mr-1" />
-                                                    สำเร็จ
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => handleStatusChange(l.id, "CANCELLED")}
-                                                    className="h-8 text-red-600 border-red-600 hover:bg-red-50 hover:text-red-700"
-                                                    title="ยกเลิกคิว"
-                                                >
-                                                    <XCircle className="h-4 w-4 mr-1" />
-                                                    ยกเลิก
+                                                    จัดการ
                                                 </Button>
                                             </div>
                                         ) : (

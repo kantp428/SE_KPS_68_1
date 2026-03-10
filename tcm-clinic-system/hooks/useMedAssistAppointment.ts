@@ -49,26 +49,27 @@ export function useMedAssistAppointment(
         }
     }, [page, limit, status, nameSearch, dateSearch]);
 
-    const updateStatus = async (id: number, newStatus: appointment_status_enum) => {
-        try {
-            setLoading(true);
-            setError(null);
-            await api.patch(`/med-assist/appointment/${id}`, { status: newStatus });
-            await fetchList(); // Refresh the list after update
-            return true;
-        } catch (err: unknown) {
-            const errorMsg = handleException(err, "Failed to update appointment status");
-            setError(errorMsg);
-            console.error(errorMsg);
-            throw err;
-        } finally {
-            setLoading(false);
-        }
-    };
+    // const updateStatus = async (id: number, newStatus: appointment_status_enum) => {
+    //     try {
+    //         setLoading(true);
+    //         setError(null);
+    //         await api.patch(`/med-assist/appointment/${id}`, { status: newStatus });
+    //         await fetchList(); // Refresh the list after update
+    //         return true;
+    //     } catch (err: unknown) {
+    //         const errorMsg = handleException(err, "Failed to update appointment status");
+    //         setError(errorMsg);
+    //         console.error(errorMsg);
+    //         throw err;
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // };
 
     useEffect(() => {
         fetchList();
     }, [fetchList]);
 
-    return { list, loading, error, fetchList, updateStatus };
+    return { list, loading, error, fetchList, //updateStatus 
+    };
 }

@@ -55,6 +55,8 @@ export async function POST(req: Request) {
   return NextResponse.json({
     id: account.id,
     username: account.username,
+    role: account.account_role,
+    staffRole: account.staff?.staff_role, // ส่ง Role ของ Staff กลับไปด้วย
     fullName: fullName,
   });
 }

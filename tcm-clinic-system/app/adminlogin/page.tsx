@@ -43,15 +43,22 @@ export default function AdminLoginPage() {
         try {
             const isEmail = data.username.includes("@");
 
-            await login({
+            const res = await login({
                 ...(isEmail ? { email: data.username } : { username: data.username }),
                 password: data.password,
             });
 
             toast.success("เข้าสู่ระบบเจ้าหน้าที่สำเร็จ");
-            // Redirect to admin dashboard (example: /admin or /staff)
-            // Can be adjusted based on actual roles
-            router.push("/patient"); // temporary fallback
+
+            // Redirect based on role
+            if (res.staffRole === "DOCTOR") {
+                router.push("/doctor");
+            } else if (res.staffRole === "MED_ASSIST") {
+                router.push("/med-assist");
+            } else {
+                router.push("/"); // fallback
+            }
+
             router.refresh();
 
         } catch (e: unknown) {
