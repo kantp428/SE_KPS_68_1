@@ -60,6 +60,7 @@ const items = [
   },
   { title: "ข้อมูลห้อง", url: "/med-assist/room", icon: DoorOpen },
   { title: "รายชื่อคนไข้", url: "/med-assist/patients", icon: Users },
+  { title: "พนักงาน", url: "/med-assist/staff", icon: UserCircle2Icon },
 ] satisfies MenuItem[];
 
 function isActivePath(pathname: string, url: string) {

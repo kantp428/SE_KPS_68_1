@@ -16,7 +16,7 @@ export default function CreatePatientPage() {
     last_name: "",
     thai_id: "",
     birthdate: "",
-    gender: "MALE",
+    gender: "",
     phone_number: "",
   });
 
@@ -92,6 +92,7 @@ export default function CreatePatientPage() {
               onChange={handleChange}
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
             >
+              <option value="" disabled hidden>-- กรุณาเลือกเพศ --</option>
               <option value="MALE">ชาย (Male)</option>
               <option value="FEMALE">หญิง (Female)</option>
             </select>
