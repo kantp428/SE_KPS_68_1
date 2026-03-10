@@ -1,34 +1,102 @@
 "use client";
 
 import { useForm, useFieldArray, Controller } from "react-hook-form";
-import { Plus, Trash2 } from "lucide-react";
+import { Check, ChevronsUpDown, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
-import { toast } from "sonner"; // ถ้าไม่ได้ลง sonner ไว้ ใช้ alert() แทนได้ครับ
+import { toast } from "sonner"; 
 
 type AddMedicinePayload = { medId: number; quantity: number; };
 type FormValues = { items: AddMedicinePayload[]; };
 type MedicineOption = { id: number; name: string; price: number; };
 
+// 🌟 สร้าง Component ย่อยสำหรับ Dropdown แบบค้นหาได้
+const MedicineCombobox = ({
+  value,
+  onChange,
+  options,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  options: MedicineOption[];
+}) => {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className={cn(
+            "w-full justify-between font-normal",
+            !value && "text-muted-foreground"
+          )}
+        >
+          {value > 0
+            ? options.find((med) => med.id === value)?.name
+            : "พิมพ์ค้นหาชื่อยา..."}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[300px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="ค้นหายา..." />
+          <CommandList>
+            <CommandEmpty>ไม่พบชื่อยานี้</CommandEmpty>
+            <CommandGroup>
+              {options.map((med) => (
+                <CommandItem
+                  key={med.id}
+                  value={med.name} 
+                  onSelect={() => {
+                    onChange(med.id);
+                    setOpen(false); 
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      value === med.id ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  {med.name} (฿{med.price})
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
 export default function AddMedicine() {
-  const invoiceId = 1; // สมมติว่าเติมเข้าใบเสร็จ ID: 1 (ต้องมี ID นี้ใน DB นะครับ)
+  const invoiceId = 1; // ยังต้องเก็บไว้ส่งไปให้ API แต่ไม่ต้องโชว์ให้ User เห็นครับ
   const [medicineList, setMedicineList] = useState<MedicineOption[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // ดึงรายชื่อยาจาก Database ตอนเปิดหน้าเว็บ
   useEffect(() => {
     const fetchMedicines = async () => {
       try {
-        const res = await fetch('/api/invoice-items');
+        const res = await fetch('/api/invoice-med');
         const json = await res.json();
         setMedicineList(json.data || []);
       } catch (error) {
@@ -48,7 +116,6 @@ export default function AddMedicine() {
     control, name: "items",
   });
 
-  // ฟังก์ชันยิง API ไปบันทึกและคิดเงิน
   const onSubmitForm = async (data: FormValues) => {
     const payload = data.items.filter(item => item.medId > 0);
     
@@ -58,7 +125,7 @@ export default function AddMedicine() {
     }
 
     try {
-      const res = await fetch('/api/invoice-items', {
+      const res = await fetch('/api/invoice-med', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ invoiceId: invoiceId, items: payload })
@@ -68,7 +135,7 @@ export default function AddMedicine() {
       
       if (res.ok) {
         toast.success(`บันทึกสำเร็จ! ยอดเงินเพิ่มขึ้น ฿${result.addedAmount}`);
-        reset({ items: [{ medId: 0, quantity: 1 }] }); // ล้างฟอร์ม
+        reset({ items: [{ medId: 0, quantity: 1 }] }); 
       } else {
         toast.error(result.message);
       }
@@ -81,30 +148,23 @@ export default function AddMedicine() {
 
   return (
     <form onSubmit={handleSubmit(onSubmitForm)} className="space-y-4 rounded-xl border bg-card p-6 shadow-sm max-w-2xl mx-auto mt-10">
-      <h2 className="text-lg font-semibold">รายการจ่ายยา (เพิ่มเข้าใบเสร็จ #{invoiceId})</h2>
+      <h2 className="text-lg font-semibold">รายการจ่ายยา</h2>
 
       <div className="space-y-3">
         {fields.map((fieldItem, index) => (
           <div key={fieldItem.id} className="grid items-end gap-3 md:grid-cols-[2fr_1fr_auto]">
+            
             <div className="space-y-2">
               <Label>ยาชนิดที่ #{index + 1}</Label>
               <Controller
                 control={control}
                 name={`items.${index}.medId`}
                 render={({ field }) => (
-                  <Select
-                    value={field.value > 0 ? String(field.value) : ""}
-                    onValueChange={(value) => field.onChange(Number(value))}
-                  >
-                    <SelectTrigger><SelectValue placeholder="เลือกยา..." /></SelectTrigger>
-                    <SelectContent>
-                      {medicineList.map((med) => (
-                        <SelectItem key={med.id} value={String(med.id)}>
-                          {med.name} (฿{med.price}) {/* โชว์ราคาให้ดูด้วยเลย */}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <MedicineCombobox 
+                    value={field.value} 
+                    onChange={field.onChange} 
+                    options={medicineList} 
+                  />
                 )}
               />
             </div>
