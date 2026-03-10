@@ -1,4 +1,5 @@
 ﻿import prisma from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 
@@ -11,7 +12,7 @@ export async function GET(req: Request) {
 
     const skip = (page - 1) * limit;
 
-    const whereClause: any = search
+    const whereClause: Prisma.staffWhereInput = search
       ? {
           OR: [
             { first_name: { contains: search, mode: "insensitive" } },
@@ -101,9 +102,9 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(newStaff, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating staff:", error);
-    if (error.code === 'P2002') {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
        return NextResponse.json(
         { message: "Username หรือ Email นี้ถูกใช้งานไปแล้ว" },
         { status: 409 }

@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 
@@ -68,7 +69,7 @@ export async function PUT(
     }
 
     // Prepare account data to update
-    const accountData: any = {
+    const accountData: Prisma.accountUpdateInput = {
       username,
       email,
     };
@@ -109,9 +110,9 @@ export async function PUT(
     });
 
     return NextResponse.json(updatedStaff);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating staff:", error);
-    if (error.code === 'P2025') {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
        return NextResponse.json({ message: "Staff not found" }, { status: 404 });
     }
     return NextResponse.json(
@@ -137,9 +138,9 @@ export async function DELETE(
     });
 
     return NextResponse.json({ message: "Staff deleted successfully" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error deleting staff:", error);
-    if (error.code === 'P2025') {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
        return NextResponse.json({ message: "Staff not found" }, { status: 404 });
     }
     return NextResponse.json(

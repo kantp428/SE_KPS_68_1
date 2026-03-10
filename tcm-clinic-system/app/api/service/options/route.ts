@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { Prisma, record_status_enum } from "@prisma/client";
+import { Prisma, service_status_enum } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
@@ -14,7 +14,7 @@ export async function GET(req: Request) {
     const skip = (page - 1) * limit;
 
     const where: Prisma.serviceWhereInput = {
-      status: record_status_enum.ACTIVE,
+      status: service_status_enum.AVAILABLE,
     };
     if (search) {
       where.name = { contains: search, mode: "insensitive" };
