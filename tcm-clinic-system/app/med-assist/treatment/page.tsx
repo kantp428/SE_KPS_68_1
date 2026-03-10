@@ -1,5 +1,15 @@
 "use client";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import {
   Pagination,
@@ -15,7 +25,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -25,18 +34,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar } from "@/components/ui/calendar";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useServiceOptions } from "@/hooks/useServiceOptions";
 import { useTreatment, ValidStatus } from "@/hooks/useTreatment";
 import { cn } from "@/lib/utils";
+import { format, parseISO } from "date-fns";
+import { th } from "date-fns/locale";
 import {
   BriefcaseMedical,
   CalendarIcon,
@@ -46,8 +55,6 @@ import {
   RefreshCcw,
   Search,
 } from "lucide-react";
-import { format } from "date-fns";
-import { th } from "date-fns/locale";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -62,7 +69,6 @@ const TreatmentPage = () => {
   // Search States
   const [nameSearch, setNameSearch] = useState("");
   const [serviceSearch, setServiceSearch] = useState("");
-  const [dateSearch, setDateSearch] = useState("");
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedServices, setSelectedServices] = useState<number[]>([]);
@@ -77,24 +83,22 @@ const TreatmentPage = () => {
   };
 
   const debouncedNameSearch = useDebounce(nameSearch, 500);
+  const debouncedServiceSearch = useDebounce(serviceSearch, 300);
+  const selectedDateParam = selectedDate
+    ? format(selectedDate, "yyyy-MM-dd")
+    : undefined;
   const { list, loading, fetchList } = useTreatment(
     currentPage,
     limit,
     tab,
     debouncedNameSearch,
-    // debouncedServiceSearch,
-    // dateSearch
+    "/treatment/med-assist",
+    selectedServices,
+    selectedDateParam,
   );
 
-  const SERVICES_OPTIONS = [
-    { label: "กายภาพบำบัด", value: 1 },
-    { label: "นวดแผนไทย", value: 2 },
-    { label: "ฝังเข็ม", value: 3 },
-    { label: "ปรึกษาจิตวิทยา", value: 4 },
-  ];
-  const filteredServices = SERVICES_OPTIONS.filter((option) =>
-    option.label.toLowerCase().includes(serviceSearch.toLowerCase()),
-  );
+  const { options: serviceOptions, loading: serviceOptionsLoading } =
+    useServiceOptions(debouncedServiceSearch, 10, 1);
 
   const handleRefresh = async () => {
     try {
@@ -121,9 +125,7 @@ const TreatmentPage = () => {
             onValueChange={(v) => {
               setTab(v as ValidStatus);
               setCurrentPage(1);
-              // เคลียร์ค่าค้นหาเมื่อเปลี่ยน tab (เลือกเอาว่าจะเคลียร์ไหม)
               setServiceSearch("");
-              setDateSearch("");
             }}
             className="w-full lg:w-auto"
           >
@@ -145,7 +147,7 @@ const TreatmentPage = () => {
                 className={cn("w-4 h-4", loading && "animate-spin")}
               />
             </Button>
-            <Button onClick={() => router.push("/med-assist/room/new")}>
+            <Button onClick={() => router.push("/med-assist/treatment/new")}>
               + เพิ่มการบำบัดใหม่
             </Button>
           </div>
@@ -157,7 +159,7 @@ const TreatmentPage = () => {
             <Search className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
             <Input
               placeholder="ค้นหาชื่อคนไข้..."
-              className="pl-9 font-normal"
+              className="h-10 pl-9 font-normal"
               value={nameSearch}
               onChange={(e) => setNameSearch(e.target.value)}
             />
@@ -173,25 +175,25 @@ const TreatmentPage = () => {
                     <Button
                       variant="outline"
                       role="combobox"
-                      className="h-auto min-h-10 w-full justify-between font-normal"
+                      className="h-10 w-full justify-between font-normal"
                     >
-                      <div className="flex flex-wrap items-center gap-1">
+                      <div className="flex min-w-0 flex-nowrap items-center gap-1 overflow-hidden">
                         <BriefcaseMedical className="text-muted-foreground h-4 w-4 shrink-0" />
                         {selectedServices.length > 0 ? (
                           selectedServices.map((val) => (
                             <Badge
                               key={val}
                               variant="secondary"
-                              className="mr-1 font-normal"
+                              className="mr-1 shrink-0 font-normal"
                             >
                               {
-                                SERVICES_OPTIONS.find((s) => s.value === val)
+                                serviceOptions.find((s) => s.value === val)
                                   ?.label
                               }
                             </Badge>
                           ))
                         ) : (
-                          <span className="text-muted-foreground">
+                          <span className="truncate text-muted-foreground">
                             เลือกบริการ...
                           </span>
                         )}
@@ -210,9 +212,13 @@ const TreatmentPage = () => {
                         onValueChange={setServiceSearch}
                       />
                       <CommandList>
-                        <CommandEmpty>No service found.</CommandEmpty>
+                        <CommandEmpty>
+                          {serviceOptionsLoading
+                            ? "Loading services..."
+                            : "No service found."}
+                        </CommandEmpty>
                         <CommandGroup>
-                          {filteredServices.map((option) => (
+                          {serviceOptions.map((option) => (
                             <CommandItem
                               key={option.value}
                               value={option.label}
@@ -297,24 +303,24 @@ const TreatmentPage = () => {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead className="min-w-30">คนไข้</TableHead>
-              <TableHead className="min-w-30">แพทย์</TableHead>
-              <TableHead className="min-w-30">บริการ</TableHead>
-              <TableHead className="min-w-30">ห้อง</TableHead>
-              <TableHead className="text-center min-w-30">เวลาเริ่ม</TableHead>
+              <TableHead className="text-center min-w-30">คนไข้</TableHead>
+              <TableHead className="text-center min-w-30">แพทย์</TableHead>
+              <TableHead className="text-center min-w-30">บริการ</TableHead>
+              <TableHead className="text-center min-w-30">ห้อง</TableHead>
+              <TableHead className="w-28 text-center">เวลาเริ่ม</TableHead>
               {tab === "IN_PROGRESS" && (
-                <TableHead className="text-center min-w-30">
+                <TableHead className="w-28 text-center">
                   เวลาคาดว่าจะจบ
                 </TableHead>
               )}
               {tab !== "IN_PROGRESS" && (
                 <>
-                  <TableHead className="text-center min-w-30">เวลาจบ</TableHead>
-                  <TableHead className="text-center min-w-30">วันที่</TableHead>
+                  <TableHead className="w-28 text-center">เวลาจบ</TableHead>
                 </>
               )}
+              <TableHead className="w-32 text-center">วันที่</TableHead>
               <TableHead className="hidden sm:table-cell w-50 text-center">
-                รายละเอียดการตรวจ
+                ข้อมูลการตรวจ
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -352,43 +358,52 @@ const TreatmentPage = () => {
                   <TableCell>{l.doctorName}</TableCell>
                   <TableCell>{l.serviceName}</TableCell>
                   <TableCell>{l.roomName}</TableCell>
-                  <TableCell>
-                    <div
-                      className={cn(
-                        "inline-flex px-3 py-1 rounded-full text-xs border",
-                        "border-blue-950 bg-blue-50 text-blue-900",
-                      )}
+                  <TableCell className="w-28 text-center whitespace-nowrap">
+                    <Badge
+                      variant="secondary"
+                      className="border-blue-950 bg-blue-50 text-blue-900"
                     >
                       {l.startAt}
-                    </div>
+                    </Badge>
                   </TableCell>
-                  <TableCell>
-                    <div
-                      className={cn(
-                        "inline-flex px-3 py-1 rounded-full text-xs border",
-                        "border-blue-950 bg-blue-50 text-blue-900",
-                      )}
+                  <TableCell className="w-28 text-center whitespace-nowrap">
+                    <Badge
+                      variant="secondary"
+                      className="border-blue-950 bg-blue-50 text-blue-900"
                     >
                       {l.endAt}
-                    </div>
+                    </Badge>
                   </TableCell>
-                  {tab !== "IN_PROGRESS" && (
-                    <>
-                      <TableCell className="text-center min-w-30">
-                        {l.date}
-                      </TableCell>
-                    </>
-                  )}
-                  <TableCell>
-                    {/* Handle Detail (Health Profile View) */}
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="text-destructive"
-                      onClick={() => {}}
+                  <TableCell className="w-32 text-center whitespace-nowrap">
+                    <Badge
+                      variant="secondary"
+                      className="border-emerald-900 bg-emerald-50 text-emerald-900"
                     >
-                      <ClipboardPlus className="w-4 h-4" />
-                    </Button>
+                      {l.date
+                        ? format(parseISO(l.date), "dd/MM/yyyy", {
+                            locale: th,
+                          })
+                        : "-"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="text-destructive"
+                            onClick={() => {}}
+                          >
+                            <ClipboardPlus className="w-4 h-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          <p>รายละเอียดการตรวจ</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </TableCell>
                 </TableRow>
               ))
