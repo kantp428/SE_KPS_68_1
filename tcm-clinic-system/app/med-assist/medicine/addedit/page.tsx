@@ -48,9 +48,17 @@ const EditMedicinePage = () => {
 
   const { fetchOne, updateMedicine, createMedicine } = useMedicine();
 
-  const { register, handleSubmit, setValue, trigger, watch, reset, formState: { errors, isDirty } } = useForm<MedicineFormValues>({
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    trigger,
+    watch,
+    reset,
+    formState: { errors, isDirty },
+  } = useForm<MedicineFormValues>({
     resolver: zodResolver(medicineSchema),
-    defaultValues: { status: "AVAILABLE", price: 0 }
+    defaultValues: { status: "AVAILABLE", price: 0 },
   });
 
   useEffect(() => {
@@ -89,63 +97,124 @@ const EditMedicinePage = () => {
     }
   };
 
-  if (isInitialLoading) return (
-    <div className="flex h-[400px] flex-col items-center justify-center gap-4">
-      <Loader2 className="h-10 w-10 animate-spin text-primary" />
-      <p>กำลังโหลดข้อมูลยา...</p>
-    </div>
-  );
+  if (isInitialLoading)
+    return (
+      <div className="flex h-[400px] flex-col items-center justify-center gap-4">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p>กำลังโหลดข้อมูลยา...</p>
+      </div>
+    );
 
   return (
     <div className="p-6 max-w-2xl mx-auto space-y-6">
-      <BreadcrumbCustom items={[
-        { label: "จัดการยา", href: "/staff/medicine" },
-        { label: isEdit ? `แก้ไขข้อมูลยา [${id}]` : "เพิ่มยาใหม่" }
-      ]} />
+      <BreadcrumbCustom
+        items={[
+          { label: "จัดการยา", href: "/staff/medicine" },
+          { label: isEdit ? `แก้ไขข้อมูลยา [${id}]` : "เพิ่มยาใหม่" },
+        ]}
+      />
 
-      <h1 className="text-2xl font-bold">{isEdit ? "แก้ไขข้อมูลยา" : "เพิ่มยาใหม่"}</h1>
+      <h1 className="text-2xl font-bold">
+        {isEdit ? "แก้ไขข้อมูลยา" : "เพิ่มยาใหม่"}
+      </h1>
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">
         <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
           <div className="space-y-2">
             <Label>ชื่อยา</Label>
-            <Input {...register("name")} placeholder="กรอกชื่อยา" className={errors.name ? "border-destructive" : ""} />
-            {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+            <Input
+              {...register("name")}
+              placeholder="กรอกชื่อยา"
+              className={errors.name ? "border-destructive" : ""}
+            />
+            {errors.name && (
+              <p className="text-xs text-destructive">{errors.name.message}</p>
+            )}
           </div>
 
           <div className="space-y-2">
             <Label>คำอธิบาย (สรรพคุณ)</Label>
-            <Textarea {...register("description")} placeholder="กรอกคำอธิบายหรือสรรพคุณยา" rows={3} />
+            <Textarea
+              {...register("description")}
+              placeholder="กรอกคำอธิบายหรือสรรพคุณยา"
+              rows={3}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>ราคา (บาท)</Label>
               <Input type="number" {...register("price")} placeholder="0.00" />
-              {errors.price && <p className="text-xs text-destructive">{errors.price.message}</p>}
+              {errors.price && (
+                <p className="text-xs text-destructive">
+                  {errors.price.message}
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>สถานะ</Label>
-              <Select value={watch("status")} onValueChange={(v) => setValue("status", v, { shouldDirty: true })}>
-                <SelectTrigger><SelectValue placeholder="เลือกสถานะ" /></SelectTrigger>
+              <Select
+                value={watch("status")}
+                onValueChange={(v) =>
+                  setValue("status", v, { shouldDirty: true })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="เลือกสถานะ" />
+                </SelectTrigger>
                 <SelectContent>
-                  {STATUS_OPTIONS.map((opt) => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                  {STATUS_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Button variant="outline" className="flex-1" onClick={() => isDirty ? setIsCancelOpen(true) : router.back()}>ยกเลิก</Button>
-            <Button className="flex-1" onClick={async () => (await trigger()) ? setIsSaveOpen(true) : toast.error("กรุณากรอกข้อมูลให้ครบถ้วน")}>
-              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "บันทึกข้อมูล"}
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => (isDirty ? setIsCancelOpen(true) : router.back())}
+            >
+              ยกเลิก
+            </Button>
+            <Button
+              className="flex-1"
+              onClick={async () =>
+                (await trigger())
+                  ? setIsSaveOpen(true)
+                  : toast.error("กรุณากรอกข้อมูลให้ครบถ้วน")
+              }
+            >
+              {isSubmitting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                "บันทึกข้อมูล"
+              )}
             </Button>
           </div>
         </form>
       </div>
 
-      <ConfirmDialog open={isCancelOpen} onOpenChange={setIsCancelOpen} title="ยกเลิก?" description="ข้อมูลที่แก้ไขจะสูญหาย" confirmText="ยืนยัน" onConfirm={() => router.back()} />
-      <ConfirmDialog open={isSaveOpen} onOpenChange={setIsSaveOpen} title="บันทึกข้อมูล?" confirmText="ยืนยัน" onConfirm={handleSubmit(onSubmit)} />
+      <ConfirmDialog
+        open={isCancelOpen}
+        onOpenChange={setIsCancelOpen}
+        title="ยกเลิก?"
+        description="ข้อมูลที่แก้ไขจะสูญหาย"
+        confirmText="ยืนยัน"
+        onConfirm={() => router.back()}
+      />
+      <ConfirmDialog
+        open={isSaveOpen}
+        onOpenChange={setIsSaveOpen}
+        description=""
+        title="บันทึกข้อมูล?"
+        confirmText="ยืนยัน"
+        onConfirm={handleSubmit(onSubmit)}
+      />
     </div>
   );
 };

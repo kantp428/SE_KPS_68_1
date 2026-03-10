@@ -194,11 +194,6 @@ enum treatment_status_enum {
   COMPLETED
 }
 
-enum medicine_status_enum {
-  AVAILABLE
-  UNAVAILABLE
-}
-
 enum service_status_enum {
   AVAILABLE
   UNAVAILABLE

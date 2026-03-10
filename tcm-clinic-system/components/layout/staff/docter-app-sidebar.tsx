@@ -10,7 +10,9 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import {
+  CalendarDays,
   ChevronsUpDown,
+  ClipboardPlus,
   DoorOpen,
   HeartPulse,
   Home,
@@ -32,7 +34,8 @@ const user = {
 
 const items = [
   { title: "หน้าหลัก", url: "/doctor", icon: Home },
-  { title: "ข้อมูลห้อง", url: "/doctor/room", icon: DoorOpen },
+  { title: "การบำบัด", url: "/doctor/treatment", icon: ClipboardPlus },
+  { title: "ตารางงาน", url: "/doctor/schedule", icon: CalendarDays },
 ];
 
 export function DoctorAppSidebar() {

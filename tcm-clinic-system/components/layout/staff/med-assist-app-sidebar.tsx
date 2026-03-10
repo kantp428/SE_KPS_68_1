@@ -18,12 +18,16 @@ import {
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import {
+  Calendar,
+  CalendarDays,
   ChevronRight,
   ChevronsUpDown,
+  ClipboardPlus,
   Cross,
   DoorOpen,
   HeartPulse,
   Home,
+  Pill,
   UserCircle2Icon,
 } from "lucide-react";
 import Link from "next/link";
@@ -61,7 +65,10 @@ const items = [
       { title: "เพิ่มการบำบัด", url: "/med-assist/treatment/new" },
     ],
   },
+  { title: "ตารางงาน", url: "/med-assist/schedule", icon: CalendarDays },
+  { title: "บริการ", url: "/med-assist/service", icon: ClipboardPlus },
   { title: "ห้อง", url: "/med-assist/room", icon: DoorOpen },
+  { title: "ยา", url: "/med-assist/medicine", icon: Pill },
 ] satisfies MenuItem[];
 
 function isActivePath(pathname: string, url: string) {
