@@ -74,7 +74,7 @@ const MedicinePage = () => {
             className="h-10 focus-visible:ring-1 transition-all"
           />
         </div>
-        <Button onClick={() => router.push("/staff/medicine/new")}>
+        <Button onClick={() => router.push("/medicine/addedit")}>
           + เพิ่มยาใหม่
         </Button>
       </div>
