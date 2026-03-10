@@ -41,22 +41,14 @@ export default function PatientsListPage() {
 
   return (
     <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">รายชื่อคนไข้</h1>
-          <p className="text-muted-foreground mt-2">
-            จัดการข้อมูลพื้นฐานและประวัติการรักษาของคนไข้ทั้งหมด
-          </p>
-        </div>
-        <Link href="/med-assist/patients/create">
-          <Button className="flex items-center gap-2">
-            <UserPlus className="w-4 h-4" />
-            ลงทะเบียนคนไข้ใหม่
-          </Button>
-        </Link>
+      <div className="flex flex-col justify-between items-start gap-1">
+        <h1 className="text-3xl font-bold tracking-tight">รายชื่อคนไข้</h1>
+        <p className="text-muted-foreground">
+          จัดการข้อมูลพื้นฐานและประวัติการรักษาของคนไข้ทั้งหมด
+        </p>
       </div>
 
-      <div className="flex items-center space-x-2">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 sm:mt-0">
         <div className="relative flex w-full max-w-sm items-center space-x-2">
           <Input 
             type="search" 
@@ -68,6 +60,12 @@ export default function PatientsListPage() {
             }}
           />
         </div>
+        <Link href="/med-assist/patients/create">
+          <Button className="gap-2 shrink-0">
+            <UserPlus className="w-4 h-4" />
+            <span>ลงทะเบียนคนไข้ใหม่</span>
+          </Button>
+        </Link>
       </div>
 
       <div className="border rounded-lg bg-card">
@@ -117,10 +115,26 @@ export default function PatientsListPage() {
                     {patient.birthdate ? new Date(patient.birthdate).toLocaleDateString("th-TH") : "-"}
                   </TableCell>
                   <TableCell>
-                    {patient.gender === "MALE" ? "ชาย" : patient.gender === "FEMALE" ? "หญิง" : patient.gender}
+                    <span className={cn(
+                      "px-2 py-1 rounded-full text-xs font-semibold",
+                      patient.gender === "MALE" ? "bg-blue-100 text-blue-800" : patient.gender === "FEMALE" ? "bg-pink-100 text-pink-800" : "bg-gray-100 text-gray-800"
+                    )}>
+                      {patient.gender === "MALE" ? "ชาย" : patient.gender === "FEMALE" ? "หญิง" : patient.gender}
+                    </span>
                   </TableCell>
                   <TableCell>{patient.phone_number}</TableCell>
-                  <TableCell>{patient.blood_group}</TableCell>
+                  <TableCell>
+                    <span className={cn(
+                      "px-2 py-1 rounded-full text-xs font-semibold",
+                      patient.blood_group === "A" ? "bg-red-100 text-red-800" : 
+                      patient.blood_group === "B" ? "bg-blue-100 text-blue-800" : 
+                      patient.blood_group === "AB" ? "bg-purple-100 text-purple-800" : 
+                      patient.blood_group === "O" ? "bg-orange-100 text-orange-800" : 
+                      "bg-gray-100 text-gray-800"
+                    )}>
+                      {patient.blood_group}
+                    </span>
+                  </TableCell>
                   <TableCell>{patient.chronic_disease || "ไม่มี"}</TableCell>
                   <TableCell className="text-right">
                     <Link href={`/med-assist/patients/${patient.id}/edit`}>

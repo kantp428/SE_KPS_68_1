@@ -21,6 +21,9 @@ import { Input } from "@/components/ui/input";
 import { useStaff } from "@/hooks/useStaff";
 import { useDebounce } from "@/hooks/use-debounce";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Plus, Edit2 } from "lucide-react";
+import Link from "next/link";
 
 export default function StaffListPage() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -47,7 +50,7 @@ export default function StaffListPage() {
         </div>
       </div>
 
-      <div className="flex items-center space-x-2">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 sm:mt-0">
         <div className="relative flex w-full max-w-sm items-center space-x-2">
           <Input 
             type="search" 
@@ -59,6 +62,12 @@ export default function StaffListPage() {
             }}
           />
         </div>
+        <Link href="/med-assist/staff/create">
+          <Button className="gap-2 shrink-0">
+            <Plus className="h-4 w-4" />
+            <span>เพิ่มพนักงาน</span>
+          </Button>
+        </Link>
       </div>
 
       <div className="border rounded-lg bg-card">
@@ -69,6 +78,7 @@ export default function StaffListPage() {
               <TableHead>ตำแหน่ง</TableHead>
               <TableHead>เพศ</TableHead>
               <TableHead>เบอร์โทรศัพท์</TableHead>
+              <TableHead className="w-[150px] text-right">จัดการ</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -79,11 +89,12 @@ export default function StaffListPage() {
                   <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-8 w-24 ml-auto" /></TableCell>
                 </TableRow>
               ))
             ) : list?.data?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                   ยังไม่มีข้อมูลพนักงานในระบบ
                 </TableCell>
               </TableRow>
@@ -102,9 +113,22 @@ export default function StaffListPage() {
                     </span>
                   </TableCell>
                   <TableCell>
-                    {staff.gender === "MALE" ? "ชาย" : staff.gender === "FEMALE" ? "หญิง" : staff.gender}
+                    <span className={cn(
+                      "px-2 py-1 rounded-full text-xs font-semibold",
+                      staff.gender === "MALE" ? "bg-blue-100 text-blue-800" : staff.gender === "FEMALE" ? "bg-pink-100 text-pink-800" : "bg-gray-100 text-gray-800"
+                    )}>
+                      {staff.gender === "MALE" ? "ชาย" : staff.gender === "FEMALE" ? "หญิง" : staff.gender}
+                    </span>
                   </TableCell>
                   <TableCell>{staff.phone_number}</TableCell>
+                  <TableCell className="text-right">
+                    <Link href={`/med-assist/staff/${staff.id}/edit`}>
+                      <Button variant="outline" size="sm" className="flex items-center gap-2 ml-auto" title="แก้ไขข้อมูลพนักงาน">
+                        <Edit2 className="w-4 h-4" />
+                        แก้ไขข้อมูล
+                      </Button>
+                    </Link>
+                  </TableCell>
                 </TableRow>
               ))
             )}
