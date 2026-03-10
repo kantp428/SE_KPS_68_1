@@ -20,3 +20,24 @@ export interface AppointmentData {
     datetime: string;
     status: string;
 }
+
+export interface MedAssistAppointmentListItem {
+    id: number;
+    patientId: number;
+    patientName: string;
+    patientPhone: string;
+    datetime: string;
+    date: string; // for display yyyy-MM-dd
+    time: string; // for display HH:mm
+    status: string;
+}
+
+export interface MedAssistAppointmentListResponse {
+    data: MedAssistAppointmentListItem[];
+    pagination: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
+}
