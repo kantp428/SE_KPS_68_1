@@ -1,17 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { gender_enum, blood_group_enum } from "@prisma/client";
+import { gender_enum, staff_role_enum } from "@prisma/client";
 
-export type Patient = {
+export type Staff = {
   id: number;
   first_name: string;
   last_name: string;
-  thai_id: string;
-  birthdate: string | null;
   gender: gender_enum;
   phone_number: string;
-  blood_group: blood_group_enum;
-  chronic_disease: string | null;
-  account_id: number | null;
+  staff_role: staff_role_enum;
 };
 
 export type PaginationMeta = {
@@ -21,19 +17,19 @@ export type PaginationMeta = {
   totalPages: number;
 };
 
-export type PatientListResponse = {
-  data: Patient[];
+export type StaffListResponse = {
+  data: Staff[];
   pagination: PaginationMeta;
 };
 
-export function usePatient(page: number, limit: number, search?: string) {
-  const [list, setList] = useState<PatientListResponse | null>(null);
+export function useStaff(page: number, limit: number, search?: string) {
+  const [list, setList] = useState<StaffListResponse | null>(null);
   const [loading, setLoading] = useState(false);
 
   const fetchList = useCallback(async () => {
     try {
       setLoading(true);
-      const url = new URL("/api/patients", window.location.origin);
+      const url = new URL("/api/staff", window.location.origin);
       url.searchParams.set("page", page.toString());
       url.searchParams.set("limit", limit.toString());
       if (search) {
@@ -41,7 +37,7 @@ export function usePatient(page: number, limit: number, search?: string) {
       }
 
       const res = await fetch(url.toString());
-      if (!res.ok) throw new Error("Failed to fetch patients");
+      if (!res.ok) throw new Error("Failed to fetch staff");
 
       const data = await res.json();
       setList(data);
