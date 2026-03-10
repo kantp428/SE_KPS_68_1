@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import ReceiptCard from "@/components/receipt/ReceiptCard";
 import {
   Dialog,
   DialogContent,
@@ -144,29 +145,44 @@ export default function ReceiptPage() {
                   <TableCell className="text-center">
                     <div className="flex justify-center gap-2">
                       
-                      {/* 1. ปุ่มดูใบเสร็จ (Dialog) */}
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            <ReceiptText className="w-4 h-4 mr-2" />
-                            ใบเสร็จ
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>ใบเสร็จรับเงิน - {r.patientName}</DialogTitle>
-                          </DialogHeader>
-                          <div className="p-4 bg-muted rounded-md text-sm">
-                            <p><strong>คนไข้:</strong> {r.patientName}</p>
-                            <p><strong>บริการ:</strong> {r.serviceName}</p>
-                            <p><strong>ยอดชำระ:</strong> ฿{r.price.toLocaleString()}</p>
-                            {/* ตรงนี้เดี๋ยวเรามาออกแบบหน้าตาใบเสร็จจริงๆ กันทีหลังครับ */}
-                            <p className="mt-4 text-center text-muted-foreground">
-                              --- ออกแบบหน้าใบเสร็จสวยๆ ตรงนี้ ---
-                            </p>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
+                     
+                    <Dialog>
+                    <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                        <ReceiptText className="w-4 h-4 mr-2" />
+                        ใบเสร็จ
+                        </Button>
+                    </DialogTrigger>
+                    
+                    {/* ขยายขนาด Dialog ให้กว้างขึ้นเพื่อรองรับใบเสร็จขนาด A4 ของคุณ และใส่ Scrollbar เผื่อจอยาวไม่พอ */}
+                    <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh]">
+                        <DialogHeader className="sr-only">
+                        <DialogTitle>ใบเสร็จรับเงิน - {r.patientName}</DialogTitle>
+                        </DialogHeader>
+                        
+                        {/* สร้างพื้นหลังสีเทา เพื่อให้ตัวใบเสร็จสีขาวของคุณดูลอยเด่นขึ้นมาเหมือนกระดาษจริง */}
+                        <div className="bg-muted p-4 md:p-8 rounded-md">
+                        
+                        {/* เรียกใช้ Component เดิมของคุณ และจัดรูปร่างข้อมูล (Map data) ส่งเข้าไป */}
+                        <ReceiptCard 
+                            data={{
+                            receiptNumber: `TCM-${r.date.replace(/\//g, '')}-${r.id}`, // จำลองเลขใบเสร็จ เช่น TCM-09032026-1
+                            date: r.date,
+                            patientName: r.patientName,
+                            items: [
+                                { 
+                                name: r.serviceName, // เอาชื่อบริการมาใส่เป็นรายการที่ 1
+                                qty: 1, 
+                                price: r.price 
+                                }
+                            ],
+                            total: r.price
+                            }} 
+                        />
+                        
+                        </div>
+                    </DialogContent>
+                    </Dialog>
 
                       {/* 2. ปุ่มยืนยันชำระเงิน (Alert Dialog) จะโชว์แค่ตอนยังไม่ชำระ */}
                       {r.status === "UNPAID" && (

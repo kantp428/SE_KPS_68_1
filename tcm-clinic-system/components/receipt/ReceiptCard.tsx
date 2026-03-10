@@ -1,6 +1,7 @@
 // ตำแหน่ง: components/receipt/ReceiptCard.tsx
 import React from 'react';
 
+
 // กำหนดรูปร่างของข้อมูลที่จะส่งเข้ามา
 interface ReceiptItem {
   name: string;
@@ -75,7 +76,7 @@ export default function ReceiptCard({ data }: ReceiptCardProps) {
       {/* สรุปยอดเงิน */}
       <div className="flex justify-end">
         <div className="w-1/2">
-          <div className="flex justify-between font-bold text-lg border-t-2 border-black pt-2">
+          <div className="flex justify-between font-bold text-sm border-t-2 border-black pt-2 whitespace-nowrap gap-4">
             <span>รวมเงินทั้งสิ้น:</span>
             <span>{data.total.toLocaleString()} บาท</span>
           </div>
