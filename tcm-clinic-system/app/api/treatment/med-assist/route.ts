@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma";
 import {
   Prisma,
-  record_status_enum,
+  service_status_enum,
   treatment_status_enum,
 } from "@prisma/client";
 import { NextResponse } from "next/server";
@@ -51,7 +51,7 @@ export async function GET(req: Request) {
         skip,
         take: limit,
         orderBy: {
-          start_at: "desc",
+          start_at: status === "IN_PROGRESS" ? "asc" : "desc",
         },
         include: {
           patient: true,
@@ -104,9 +104,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const treatmentItems = Array.isArray(body.treatmentItems)
-      ? (body.treatmentItems as Array<{ serviceId: number; roomId: number }>)
-      : [];
+    const OBSERVE_ID = 1;
 
     const healthProfilePayload = body.healthProfile as
       | {
@@ -118,42 +116,36 @@ export async function POST(req: Request) {
         }
       | undefined;
 
-    if (treatmentItems.length > 0 && healthProfilePayload) {
-      const {
-        doctorId,
-        patientId,
-        startAt,
-        treatmentStatus,
-      } = body as {
-        doctorId?: number;
-        patientId?: number;
-        startAt?: string;
-        treatmentStatus?: treatment_status_enum;
-      };
+    if (healthProfilePayload) {
+      const { doctorId, patientId, roomId, startAt, treatmentStatus } =
+        body as {
+          doctorId?: number;
+          patientId?: number;
+          roomId?: number;
+          startAt?: string;
+          treatmentStatus?: treatment_status_enum;
+        };
 
-      if (!doctorId || !patientId || !startAt) {
+      if (!doctorId || !patientId || !roomId || !startAt) {
         return NextResponse.json(
           {
             message:
-              "doctorId, patientId, startAt, healthProfile, and treatmentItems are required",
+              "doctorId, patientId, roomId, startAt, healthProfile, and treatmentItems are required",
           },
           { status: 400 },
         );
       }
 
-      const serviceIds = treatmentItems.map((item) => item.serviceId);
-      const roomIds = treatmentItems.map((item) => item.roomId);
-
-      const [doctor, patient, services, rooms] = await Promise.all([
+      const [doctor, patient, observeService, room] = await Promise.all([
         prisma.staff.findUnique({ where: { id: doctorId } }),
         prisma.patient.findUnique({ where: { id: patientId } }),
-        prisma.service.findMany({
+        prisma.service.findUnique({
           where: {
-            id: { in: serviceIds },
-            status: record_status_enum.ACTIVE,
+            id: OBSERVE_ID,
+            status: service_status_enum.AVAILABLE,
           },
         }),
-        prisma.room.findMany({ where: { id: { in: roomIds } } }),
+        prisma.room.findMany({ where: { id: roomId } }),
       ]);
 
       if (!doctor || !patient) {
@@ -163,24 +155,23 @@ export async function POST(req: Request) {
         );
       }
 
-      if (services.length !== new Set(serviceIds).size) {
+      if (!observeService) {
         return NextResponse.json(
-          { message: "One or more services are unavailable" },
+          { message: "Observe service not found" },
           { status: 404 },
         );
       }
 
-      if (rooms.length !== new Set(roomIds).size) {
+      if (!room) {
         return NextResponse.json(
-          { message: "One or more rooms not found" },
+          { message: "Room not found" },
           { status: 404 },
         );
       }
 
-      const scheduleDate =
-        /^\d{4}-\d{2}-\d{2}T/.test(startAt)
-          ? startAt.slice(0, 10)
-          : new Date(startAt).toISOString().slice(0, 10);
+      const scheduleDate = /^\d{4}-\d{2}-\d{2}T/.test(startAt)
+        ? startAt.slice(0, 10)
+        : new Date(startAt).toISOString().slice(0, 10);
       const scheduleStart = new Date(`${scheduleDate}T00:00:00`);
       const scheduleEnd = new Date(`${scheduleDate}T23:59:59.999`);
       const schedule = await prisma.work_schedule.findFirst({
@@ -193,14 +184,12 @@ export async function POST(req: Request) {
 
       if (!schedule) {
         return NextResponse.json(
-          { message: "Selected doctor has no active work schedule on this date" },
+          {
+            message: "Selected doctor has no active work schedule on this date",
+          },
           { status: 400 },
         );
       }
-
-      const serviceDurationMap = new Map(
-        services.map((service) => [service.id, service.duration_minute]),
-      );
 
       const created = await prisma.$transaction(async (tx) => {
         const healthProfile = await tx.health_profile.create({
@@ -214,109 +203,52 @@ export async function POST(req: Request) {
           },
         });
 
+        const invoice = await tx.invoice.create({
+          data: {
+            patient_id: patientId,
+            total_amount: 0,
+          },
+        });
+
         let currentStart = new Date(startAt);
-        const treatments = [];
+        const treatment = await tx.treatment.create({
+          data: {
+            health_profile_id: healthProfile.id,
+            doctor_id: doctorId,
+            patient_id: patientId,
+            service_id: OBSERVE_ID,
+            room_id: roomId,
+            treatment_status:
+              treatmentStatus || treatment_status_enum.IN_PROGRESS,
+            start_at: currentStart,
+            end_at: null,
+          },
+        });
 
-        for (const item of treatmentItems) {
-          const duration = serviceDurationMap.get(item.serviceId) || 0;
+        await tx.invoice_item.create({
+          data: {
+            invoice_id: invoice.id,
+            treatment_id: treatment.id,
+            unit_price: observeService.price,
+          },
+        });
 
-          const treatment = await tx.treatment.create({
-            data: {
-              health_profile_id: healthProfile.id,
-              doctor_id: doctorId,
-              patient_id: patientId,
-              service_id: item.serviceId,
-              room_id: item.roomId,
-              treatment_status:
-                treatmentStatus || treatment_status_enum.IN_PROGRESS,
-              start_at: currentStart,
-              end_at: null,
-            },
-          });
-
-          treatments.push(treatment);
-          currentStart = new Date(currentStart.getTime() + duration * 60_000);
-        }
+        const updatedInvoice = await tx.invoice.update({
+          where: { id: invoice.id },
+          data: {
+            total_amount: observeService.price,
+          },
+        });
 
         return {
           healthProfile,
-          treatments,
+          invoice: updatedInvoice,
+          treatment,
         };
       });
 
       return NextResponse.json(created, { status: 201 });
     }
-
-    const {
-      healthProfileId,
-      doctorId,
-      patientId,
-      serviceId,
-      roomId,
-      treatmentStatus,
-      startAt,
-      endAt,
-    } = body as {
-      healthProfileId?: number;
-      doctorId?: number;
-      patientId?: number;
-      serviceId?: number;
-      roomId?: number;
-      treatmentStatus?: treatment_status_enum;
-      startAt?: string;
-      endAt?: string | null;
-    };
-
-    if (
-      !healthProfileId ||
-      !doctorId ||
-      !patientId ||
-      !serviceId ||
-      !roomId
-    ) {
-      return NextResponse.json(
-        {
-          message:
-            "healthProfileId, doctorId, patientId, serviceId, and roomId are required",
-        },
-        { status: 400 },
-      );
-    }
-
-    const [healthProfile, doctor, patient, service, room] = await Promise.all([
-      prisma.health_profile.findUnique({ where: { id: healthProfileId } }),
-      prisma.staff.findUnique({ where: { id: doctorId } }),
-      prisma.patient.findUnique({ where: { id: patientId } }),
-      prisma.service.findFirst({
-        where: {
-          id: serviceId,
-          status: record_status_enum.ACTIVE,
-        },
-      }),
-      prisma.room.findUnique({ where: { id: roomId } }),
-    ]);
-
-    if (!healthProfile || !doctor || !patient || !service || !room) {
-      return NextResponse.json(
-        { message: "Related resource not found" },
-        { status: 404 },
-      );
-    }
-
-    const created = await prisma.treatment.create({
-      data: {
-        health_profile_id: healthProfileId,
-        doctor_id: doctorId,
-        patient_id: patientId,
-        service_id: serviceId,
-        room_id: roomId,
-        treatment_status: treatmentStatus || treatment_status_enum.IN_PROGRESS,
-        start_at: startAt ? new Date(startAt) : new Date(),
-        end_at: endAt ? new Date(endAt) : null,
-      },
-    });
-
-    return NextResponse.json(created, { status: 201 });
   } catch (error) {
     return NextResponse.json(
       { message: "Internal server error" },
