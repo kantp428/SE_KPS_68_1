@@ -236,6 +236,24 @@ root {
   --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
 }
 
+.fc-toolbar-title {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.fc {
+  background: white;
+}
+
+.fc-timegrid-slot {
+  height: 60px;
+}
+
+.fc-event {
+  border-radius: 8px;
+  font-size: 12px;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
