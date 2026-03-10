@@ -124,6 +124,9 @@ const MedAssistAppointmentPage = () => {
                                 className={cn("w-4 h-4", loading && "animate-spin")}
                             />
                         </Button>
+                        <Button onClick={() => router.push("/med-assist/appointment/new")}>
+                            + เพิ่มการจองใหม่
+                        </Button>
                     </div>
                 </div>
 
