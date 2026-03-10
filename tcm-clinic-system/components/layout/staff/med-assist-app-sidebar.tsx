@@ -68,6 +68,11 @@ function isActivePath(pathname: string, url: string) {
   return url === "/med-assist" ? pathname === url : pathname.startsWith(url);
 }
 
+// Exact match for child/leaf items to prevent parent URL bleeding into siblings
+function isActiveChild(pathname: string, url: string) {
+  return pathname === url;
+}
+
 export function MedAssistAppSidebar() {
   const pathname = usePathname();
   const [isTreatmentOpen, setIsTreatmentOpen] = useState(
@@ -136,7 +141,7 @@ export function MedAssistAppSidebar() {
                             <SidebarMenuSubItem key={child.url}>
                               <SidebarMenuSubButton
                                 asChild
-                                isActive={isActivePath(pathname, child.url)}
+                                isActive={isActiveChild(pathname, child.url)}
                               >
                                 <Link href={child.url}>
                                   <span>{child.title}</span>

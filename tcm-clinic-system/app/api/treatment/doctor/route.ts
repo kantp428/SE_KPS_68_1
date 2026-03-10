@@ -153,6 +153,7 @@ export async function POST(req: Request) {
               invoice_id: invoiceId,
               treatment_id: treatment.id,
               unit_price: price,
+
             },
           });
 

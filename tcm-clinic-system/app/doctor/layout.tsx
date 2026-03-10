@@ -1,6 +1,6 @@
 "use client";
 
-import { DocterAppSidebar } from "@/components/layout/staff/docter-app-sidebar";
+import { DoctorAppSidebar } from "@/components/layout/staff/docter-app-sidebar";
 import StaffFooter from "@/components/layout/staff/staff-footer";
 import StaffHeader from "@/components/layout/staff/staff-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -9,7 +9,7 @@ const StaffLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <SidebarProvider>
       <div className="flex h-screen w-full overflow-hidden bg-background">
-        <DocterAppSidebar />
+        <DoctorAppSidebar />
         <SidebarInset className="flex flex-col h-screen min-w-0 overflow-hidden">
           <div className="sticky top-0 z-30 w-full flex-none">
             <StaffHeader />

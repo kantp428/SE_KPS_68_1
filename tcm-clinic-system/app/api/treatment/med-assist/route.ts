@@ -16,22 +16,38 @@ export async function GET(req: Request) {
     const name = searchParams.get("name");
     const serviceIdsRaw = searchParams.get("serviceIds");
     const date = searchParams.get("date");
-    const serviceIds = (serviceIdsRaw || "")
-      .split(",")
-      .map((id) => parseInt(id, 10))
-      .filter((id) => Number.isFinite(id));
 
     const skip = (page - 1) * limit;
-    const dateFilter = date
-      ? {
-          gte: new Date(`${date}T00:00:00`),
-          lte: new Date(`${date}T23:59:59.999`),
-        }
-      : undefined;
+
+    let dateFilter = undefined;
+    if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      dateFilter = {
+        gte: new Date(`${date}T00:00:00.000Z`),
+        lte: new Date(`${date}T23:59:59.999Z`),
+      };
+    }
+    const isObserve = searchParams.get("isObserve") === "true";
+    const OBSERVE_ID = 1;
+
+    const parsedServiceIds = serviceIdsRaw
+      ? serviceIdsRaw
+          .split(",")
+          .map((id) => parseInt(id))
+          .filter((id) => !isNaN(id) && id !== OBSERVE_ID)
+      : [];
 
     const where: Prisma.treatmentWhereInput = {
       ...(status ? { treatment_status: status as treatment_status_enum } : {}),
-      ...(serviceIds.length > 0 ? { service_id: { in: serviceIds } } : {}),
+
+      // --- ปรับปรุง Logic ตรงนี้ ---
+      service_id: isObserve
+        ? OBSERVE_ID // กรณี Observe: เอาเฉพาะ ID 1
+        : {
+            not: OBSERVE_ID, // กรณีปกติ: ห้ามเอา ID 1
+            ...(parsedServiceIds.length > 0 ? { in: parsedServiceIds } : {}), // ถ้ามีการเลือก Dropdown มา ก็กรองตามนั้น (โดยที่ไม่มี ID 1 ปน)
+          },
+      // ---------------------------
+
       ...(dateFilter ? { start_at: dateFilter } : {}),
       ...(name
         ? {
@@ -64,19 +80,30 @@ export async function GET(req: Request) {
     ]);
 
     const data = treatments.map((item) => {
-      const expectedEnd = new Date(
-        item.start_at.getTime() + item.service.duration_minute * 60_000,
-      );
+      // ป้องกัน Error กรณี Relation เป็น Null (Optional Chaining)
+      const patientName = item.patient
+        ? `${item.patient.first_name} ${item.patient.last_name}`
+        : "Unknown Patient";
+
+      const doctorName = item.staff
+        ? `${item.staff.first_name} ${item.staff.last_name}`
+        : "N/A";
+
+      const serviceName = item.service?.name || "No Service";
+      const duration = item.service?.duration_minute || 0;
+
+      // การคำนวณเวลา
+      const expectedEnd = new Date(item.start_at.getTime() + duration * 60_000);
       const endAtSource = item.end_at ?? expectedEnd;
 
       return {
         id: item.id,
         healthProfileId: item.health_profile_id,
-        patientName: `${item.patient.first_name} ${item.patient.last_name}`,
-        doctorName: `${item.staff.first_name} ${item.staff.last_name}`,
-        serviceName: item.service.name,
-        serviceTime: item.service.duration_minute,
-        roomName: item.room.name,
+        patientName,
+        doctorName,
+        serviceName,
+        serviceTime: duration,
+        roomName: item.room?.name || "No Room",
         date: toDate(item.start_at),
         startAt: toHHmm(item.start_at),
         endAt: toHHmm(endAtSource),
@@ -94,8 +121,9 @@ export async function GET(req: Request) {
       },
     });
   } catch (error) {
+    console.error("GET Treatment Error:", error);
     return NextResponse.json(
-      { message: "Internal server error" },
+      { message: "Internal server error", error: String(error) },
       { status: 500 },
     );
   }
@@ -145,7 +173,7 @@ export async function POST(req: Request) {
             status: service_status_enum.AVAILABLE,
           },
         }),
-        prisma.room.findMany({ where: { id: roomId } }),
+        prisma.room.findFirst({ where: { id: roomId } }),
       ]);
 
       if (!doctor || !patient) {
@@ -169,6 +197,48 @@ export async function POST(req: Request) {
         );
       }
 
+      // ── คำนวณช่วงเวลาของ treatment ที่จะสร้าง ──
+      const newStart = new Date(startAt);
+      const newEnd = new Date(
+        newStart.getTime() + observeService.duration_minute * 60_000,
+      );
+
+      // ── ตรวจสอบ Patient ทับเวลา ──
+      const patientOverlap = await prisma.treatment.findFirst({
+        where: {
+          patient_id: patientId,
+          treatment_status: { in: [treatment_status_enum.IN_PROGRESS] },
+          start_at: { lt: newEnd }, // treatment เก่าเริ่มก่อน treatment ใหม่จบ
+          AND: [
+            {
+              OR: [
+                { end_at: null }, // ยังไม่มี end_at → ใช้ start_at + duration แทน
+                { end_at: { gt: newStart } }, // end_at อยู่หลัง newStart
+              ],
+            },
+          ],
+        },
+        include: { service: true },
+      });
+
+      if (patientOverlap) {
+        // คำนวณ end_at ของ treatment ที่ชนกันเพื่อ message ที่ชัดเจน
+        const overlapEnd = patientOverlap.end_at
+          ? patientOverlap.end_at
+          : new Date(
+              patientOverlap.start_at.getTime() +
+                (patientOverlap.service?.duration_minute ?? 0) * 60_000,
+            );
+
+        return NextResponse.json(
+          {
+            message: `Patient already has a treatment in progress from ${patientOverlap.start_at.toISOString()} to ${overlapEnd.toISOString()}`,
+          },
+          { status: 409 },
+        );
+      }
+
+      // ── ตรวจสอบ Work Schedule ──
       const scheduleDate = /^\d{4}-\d{2}-\d{2}T/.test(startAt)
         ? startAt.slice(0, 10)
         : new Date(startAt).toISOString().slice(0, 10);
@@ -191,6 +261,7 @@ export async function POST(req: Request) {
         );
       }
 
+      // ── Create ──
       const created = await prisma.$transaction(async (tx) => {
         const healthProfile = await tx.health_profile.create({
           data: {
@@ -210,7 +281,6 @@ export async function POST(req: Request) {
           },
         });
 
-        let currentStart = new Date(startAt);
         const treatment = await tx.treatment.create({
           data: {
             health_profile_id: healthProfile.id,
@@ -220,7 +290,7 @@ export async function POST(req: Request) {
             room_id: roomId,
             treatment_status:
               treatmentStatus || treatment_status_enum.IN_PROGRESS,
-            start_at: currentStart,
+            start_at: newStart,
             end_at: null,
           },
         });
@@ -235,23 +305,23 @@ export async function POST(req: Request) {
 
         const updatedInvoice = await tx.invoice.update({
           where: { id: invoice.id },
-          data: {
-            total_amount: observeService.price,
-          },
+          data: { total_amount: observeService.price },
         });
 
-        return {
-          healthProfile,
-          invoice: updatedInvoice,
-          treatment,
-        };
+        return { healthProfile, invoice: updatedInvoice, treatment };
       });
 
       return NextResponse.json(created, { status: 201 });
     }
-  } catch (error) {
+
     return NextResponse.json(
-      { message: "Internal server error" },
+      { message: "healthProfile is required" },
+      { status: 400 },
+    );
+  } catch (error) {
+    console.error("POST Treatment Error:", error);
+    return NextResponse.json(
+      { message: "Internal server error", error: String(error) },
       { status: 500 },
     );
   }
