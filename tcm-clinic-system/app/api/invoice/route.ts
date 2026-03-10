@@ -1,12 +1,10 @@
 import prisma from "@/lib/prisma";
 import { Prisma, invoice_status_enum } from "@prisma/client";
+import { formatDate } from "date-fns";
 import { NextResponse } from "next/server";
 // นำเข้า Date format utility ของคุณ (ถ้ามี)
 // import { toDate, toHHmm } from "@/app/utils/dateFormat"; 
 
-// ----------------------------------------------------------------------
-// 1. GET: ดึงข้อมูลใบเสร็จทั้งหมด (พร้อม Pagination และ Search เหมือนโค้ดเดิม)
-// ----------------------------------------------------------------------
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -31,6 +29,7 @@ export async function GET(req: Request) {
           }
         : {}),
     };
+    const sortDirection = status === "UNPAID" ? "asc" : "desc";
 
     // คิวรีข้อมูลและนับจำนวนรวมพร้อมกัน
     const [invoices, total] = await Promise.all([
@@ -39,7 +38,7 @@ export async function GET(req: Request) {
         skip,
         take: limit,
         orderBy: {
-          created_at: "desc",
+          created_at: sortDirection,
         },
         include: {
           patient: true,
@@ -62,13 +61,22 @@ export async function GET(req: Request) {
         price: Number(invItem.unit_price),
       }));
 
+      const isoString = item.created_at.toISOString();
+      const Date = isoString.split('T')[0];
+
+      const [year, month, day] = Date.split('-');
+
+      const formattedDate = `${day}/${month}/${year}`;
+      const formattedTime = isoString.split('T')[1].substring(0, 5);
+      
       return {
         id: item.id.toString(),
         receiptNumber: `TCM-${item.created_at.getFullYear()}${(item.created_at.getMonth() + 1).toString().padStart(2, '0')}-${item.id}`,
         patientName: `${item.patient?.first_name || ""} ${item.patient?.last_name || ""}`.trim(),
         total: Number(item.total_amount),
         status: item.status,
-        date: item.created_at.toLocaleDateString("th-TH"), // หรือใช้ toDate(item.created_at) ของคุณ
+        date: formattedDate,
+        time : formattedTime,
         items: mappedItems,
       };
     });
@@ -87,6 +95,41 @@ export async function GET(req: Request) {
     return NextResponse.json(
       { message: "Internal server error" },
       { status: 500 },
+    );
+  }
+}
+// ----------------------------------------------------------------------
+// PATCH: รับคำสั่งจากหน้าเว็บเพื่ออัปเดตสถานะใบเสร็จเป็น "ชำระแล้ว"
+// ----------------------------------------------------------------------
+export async function PATCH(req: Request) {
+  try {
+    const body = await req.json();
+    const { id, status } = body;
+
+    // เช็คว่าส่งข้อมูลมาครบไหม
+    if (!id || !status) {
+      return NextResponse.json(
+        { message: "ต้องระบุ ID และ Status" },
+        { status: 400 }
+      );
+    }
+
+    // สั่งให้ Prisma อัปเดตสถานะใน Database
+    const updatedInvoice = await prisma.invoice.update({
+      where: { id: parseInt(id) }, // แปลง ID ที่ส่งมาเป็นตัวเลข
+      data: { status: status as invoice_status_enum },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "อัปเดตสถานะสำเร็จ",
+      data: updatedInvoice,
+    });
+  } catch (error) {
+    console.error("PATCH Invoice Error:", error);
+    return NextResponse.json(
+      { message: "เกิดข้อผิดพลาดในการอัปเดตข้อมูล" },
+      { status: 500 }
     );
   }
 }

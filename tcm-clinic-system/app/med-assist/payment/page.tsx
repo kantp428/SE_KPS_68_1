@@ -100,7 +100,7 @@ export default function PaymentPage() {
         ...(debouncedNameSearch && { name: debouncedNameSearch }),
       });
 
-      const res = await fetch(`/api/invoices?${params.toString()}`);
+      const res = await fetch(`/api/invoice?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to fetch");
       
       const json = await res.json();
@@ -128,14 +128,14 @@ export default function PaymentPage() {
   const handlePayment = async (id: string) => {
     try {
       // สมมติว่ามี API สำหรับอัปเดตสถานะ (ถ้ายังไม่มี โค้ดนี้จะจำลองการเปลี่ยนสถานะให้ก่อน)
-      /*
-      const res = await fetch('/api/invoices', {
+      
+      const res = await fetch('/api/invoice', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, status: 'PAID' })
       });
-      if (!res.ok) throw new Error();
-      */
+      if (!res.ok) throw new Error("API error");
+      
       
       // อัปเดต UI ทันที (ไม่ต้องรอ Refresh)
       setList((prev) => prev.filter((item) => item.id !== id)); 
