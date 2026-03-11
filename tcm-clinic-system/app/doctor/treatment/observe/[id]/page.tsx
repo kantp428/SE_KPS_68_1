@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Addmedicine } from "@/components/add-medicine";
 import {
   Table,
   TableBody,
@@ -394,6 +395,8 @@ const DoctorPatientPage = () => {
                 serviceOptions={serviceOptions}
                 roomOptions={roomOptions}
               />
+              <Addmedicine/>
+
 
               <div className="flex gap-3">
                 <Button
