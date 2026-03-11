@@ -28,6 +28,7 @@ import {
   HeartPulse,
   Home,
   Pill,
+  ReceiptIcon,
   UserCircle2Icon,
 } from "lucide-react";
 import Link from "next/link";
@@ -67,6 +68,7 @@ const items = [
   },
   { title: "ตารางงาน", url: "/med-assist/schedule", icon: CalendarDays },
   { title: "บริการ", url: "/med-assist/service", icon: ClipboardPlus },
+  { title: "ใบเสร็จ", url: "/med-assist/payment", icon: ReceiptIcon },
   { title: "ห้อง", url: "/med-assist/room", icon: DoorOpen },
   { title: "ยา", url: "/med-assist/medicine", icon: Pill },
 ] satisfies MenuItem[];
