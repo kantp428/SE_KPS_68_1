@@ -1,0 +1,129 @@
+import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/session";
+import { NextResponse } from "next/server";
+
+export async function POST(request: Request) {
+    const session = await getSession();
+
+    if (!session || !session.sub) {
+        return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    try {
+        const body = await request.json();
+        const { date, time } = body; // date: "2026-03-10", time: "09:00"
+
+        if (!date || !time) {
+            return NextResponse.json({ message: "Date and Time are required" }, { status: 400 });
+        }
+
+        const accountId = Number(session.sub);
+
+        // ดึงข้อมูล Patient ถ้าระบบรองรับเฉพาะ Patient
+        const account = await prisma.account.findUnique({
+            where: { id: accountId },
+            include: { patient: true }
+        });
+
+        if (!account || !account.patient) {
+            return NextResponse.json({ message: "Patient profile not found" }, { status: 403 });
+        }
+
+        const patientId = account.patient.id;
+
+        // แปลงวันที่และเวลาเพื่อตรวจทานจอง
+        const targetDate = new Date(date);
+        const [hourStr] = time.split(":");
+        const hour = parseInt(hourStr, 10);
+
+        if (isNaN(targetDate.getTime()) || isNaN(hour)) {
+            return NextResponse.json({ message: "Invalid date or time format" }, { status: 400 });
+        }
+
+        const slotDateTime = new Date(`${date}T${hourStr}:00:00.000+07:00`);
+
+        // ตรวจสอบเงื่อนไข 1: มีหมอเข้างานหรือไม่
+        const doctorSchedules = await prisma.work_schedule.findMany({
+            where: {
+                date: targetDate,
+                is_active: true,
+                staff: {
+                    staff_role: "DOCTOR"
+                }
+            }
+        });
+
+        let hasAvailableDoctor = false;
+        for (const schedule of doctorSchedules) {
+            const startHour = schedule.starttime.getUTCHours();
+            const startMinute = schedule.starttime.getUTCMinutes();
+            const endHour = schedule.endtime.getUTCHours();
+            const endMinute = schedule.endtime.getUTCMinutes();
+
+            const scheduleStartVal = startHour + startMinute / 60;
+            const scheduleEndVal = endHour + endMinute / 60;
+            const slotStartVal = hour;
+            const slotEndVal = hour + 1; // กินเวลา 1 ชม.
+
+            if (scheduleStartVal <= slotStartVal && scheduleEndVal >= slotEndVal) {
+                hasAvailableDoctor = true;
+                break;
+            }
+        }
+
+        if (!hasAvailableDoctor) {
+            return NextResponse.json({ message: "No doctors available for this time slot" }, { status: 400 });
+        }
+
+        // ตรวจสอบเงื่อนไข 2: นับห้องตรวจรวม
+        const totalRooms = await prisma.room.count({
+            where: { status: "AVAILABLE" }
+        });
+
+        const appointmentsAtSlot = await prisma.appointment.count({
+            where: {
+                datetime: slotDateTime,
+                status: {
+                    not: "CANCELLED"
+                }
+            }
+        });
+
+        if (appointmentsAtSlot >= totalRooms) {
+            return NextResponse.json({ message: "No rooms available for this time slot" }, { status: 400 });
+        }
+
+        // ตรวจสอบว่าผู้ป่วยจองซ้ำในเวลาเดียวกันหรือไม่
+        const existingAppointment = await prisma.appointment.findFirst({
+            where: {
+                patient_id: patientId,
+                datetime: slotDateTime,
+                status: {
+                    not: "CANCELLED"
+                }
+            }
+        });
+
+        if (existingAppointment) {
+            return NextResponse.json({ message: "คุณได้ทำการจองเวลานี้เเล้ว" }, { status: 400 });
+        }
+
+        // บันทึกตารางนัดหมายใหม่
+        const newAppointment = await prisma.appointment.create({
+            data: {
+                patient_id: patientId,
+                datetime: slotDateTime,
+                status: "CONFIRMED" // หรือ PENDING ตาม Enum ที่มีใน Prisma
+            }
+        });
+
+        return NextResponse.json({
+            message: "Appointment created successfully",
+            appointment: newAppointment
+        }, { status: 201 });
+
+    } catch (error) {
+        console.error("Error creating appointment:", error);
+        return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+    }
+}
