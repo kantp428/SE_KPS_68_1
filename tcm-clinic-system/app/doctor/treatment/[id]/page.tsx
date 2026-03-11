@@ -52,6 +52,7 @@ import {
 import { useServiceOptions } from "@/hooks/useServiceOptions";
 import { useUpdateHealthProfile } from "@/hooks/useUpdateHealthProfile";
 import axios from "axios";
+import { Addmedicine } from "@/components/add-medicine";
 
 const STAFF_ID = 1; // TODO: replace with useContext/session
 
@@ -603,6 +604,7 @@ const DoctorPatientPage = () => {
 
           <FormProvider {...methods}>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <Addmedicine/>
               <div className="flex gap-3">
                 <Button
                   type="button"
