@@ -46,6 +46,7 @@ export default function AdminLoginPage() {
             const res = await login({
                 ...(isEmail ? { email: data.username } : { username: data.username }),
                 password: data.password,
+                isAdminLogin: true,
             });
 
             toast.success("เข้าสู่ระบบเจ้าหน้าที่สำเร็จ");

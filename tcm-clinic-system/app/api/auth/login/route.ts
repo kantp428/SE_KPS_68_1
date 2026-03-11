@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
-  const { username, email, password } = await req.json();
+  const { username, email, password, isAdminLogin } = await req.json();
 
   if (!((username || email) && password)) {
     return NextResponse.json(
@@ -27,6 +27,14 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { message: "Invalid credentials" },
       { status: 401 },
+    );
+  }
+
+  // ป้องกัน Patient เข้าสู่ระบบผ่านหน้า Admin Login
+  if (isAdminLogin && account.account_role !== "STAFF" && account.account_role !== "ADMIN") {
+    return NextResponse.json(
+      { message: "เข้าสู่ระบบได้เฉพาะเจ้าหน้าที่เท่านั้น" },
+      { status: 403 },
     );
   }
 

@@ -10,6 +10,7 @@ export interface LoginFormValues {
     username?: string;
     email?: string;
     password?: string;
+    isAdminLogin?: boolean;
 }
 
 export interface RegisterFormValues {
