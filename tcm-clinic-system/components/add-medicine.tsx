@@ -24,7 +24,6 @@ import { toast } from "sonner";
 
 type MedicineOption = { id: number; name: string; price: number; };
 
-// 🌟 Component Dropdown แบบค้นหาได้ (ตัวเดิม)
 const MedicineCombobox = ({
   value,
   onChange,
