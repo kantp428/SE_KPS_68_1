@@ -31,6 +31,7 @@ import {
   ReceiptIcon,
   UserCircle2Icon,
   Users,
+  Users2,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -58,14 +59,20 @@ type MenuItem = {
 
 const items = [
   { title: "หน้าหลัก", url: "/med-assist", icon: Home },
-  { title: "การบำบัด", url: "/med-assist/treatment", icon: Cross, children: [
+  {
+    title: "การบำบัด",
+    url: "/med-assist/treatment",
+    icon: Cross,
+    children: [
       { title: "รายการการบำบัด", url: "/med-assist/treatment" },
       { title: "เพิ่มการบำบัด", url: "/med-assist/treatment/new" },
-    ]
+    ],
   },
   { title: "ตารางงาน", url: "/med-assist/schedule", icon: CalendarDays },
   { title: "บริการ", url: "/med-assist/service", icon: ClipboardPlus },
   { title: "ใบเสร็จ", url: "/med-assist/payment", icon: ReceiptIcon },
+  { title: "พนักงาน", url: "/med-assist/staff", icon: UserCircle2Icon },
+  { title: "คนไข้", url: "/med-assist/patients", icon: Users2 },
   { title: "ห้อง", url: "/med-assist/room", icon: DoorOpen },
   { title: "ยา", url: "/med-assist/medicine", icon: Pill },
 ] satisfies MenuItem[];
