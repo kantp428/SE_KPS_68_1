@@ -6,11 +6,14 @@ import { medicine_status_enum } from "@prisma/client";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { invoiceId, items } = body; 
+    const { invoiceId, items } = body;
     // items จะมีหน้าตาแบบ [{ medId: 1, quantity: 2 }, ...]
 
     if (!invoiceId || !items || items.length === 0) {
-      return NextResponse.json({ message: "ข้อมูลไม่ครบถ้วน" }, { status: 400 });
+      return NextResponse.json(
+        { message: "ข้อมูลไม่ครบถ้วน" },
+        { status: 400 },
+      );
     }
 
     // 1. ดึงข้อมูล "ราคาปัจจุบัน" ของยาที่เลือกมาจาก Database
@@ -27,7 +30,7 @@ export async function POST(req: Request) {
       // หาราคาของยาตัวนั้นๆ
       const med = medicines.find((m) => m.id === item.medId);
       const unitPrice = med ? Number(med.price) : 0;
-      
+
       // บวกเงินเข้ายอดรวม
       totalToAdd += unitPrice * item.quantity;
 
@@ -56,31 +59,34 @@ export async function POST(req: Request) {
       }),
     ]);
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: "บันทึกและอัปเดตยอดเงินสำเร็จ",
-      addedAmount: totalToAdd 
+      addedAmount: totalToAdd,
     });
-
   } catch (error) {
     console.error("Add Medicine Error:", error);
-    return NextResponse.json({ message: "เกิดข้อผิดพลาดในการบันทึก" }, { status: 500 });
+    return NextResponse.json(
+      { message: "เกิดข้อผิดพลาดในการบันทึก" },
+      { status: 500 },
+    );
   }
 }
 
-// แถมฟังก์ชัน GET สำหรับดึงรายชื่อยาไปโชว์ใน Dropdown
-// แถมฟังก์ชัน GET สำหรับดึงรายชื่อยาไปโชว์ใน Dropdown
 export async function GET() {
   try {
     const medicines = await prisma.medicine.findMany({
-      where: { 
-        status: medicine_status_enum.AVAILABLE // 🌟 เรียกใช้แบบนี้ ขีดแดงจะหายไปเลย!
+      where: {
+        status: medicine_status_enum.AVAILABLE, // 🌟 เรียกใช้แบบนี้ ขีดแดงจะหายไปเลย!
       },
-      select: { id: true, name: true, price: true }
+      select: { id: true, name: true, price: true },
     });
     return NextResponse.json({ data: medicines });
   } catch (error) {
     console.error("GET Medicine Error:", error);
-    return NextResponse.json({ message: "ดึงข้อมูลยาไม่สำเร็จ" }, { status: 500 });
+    return NextResponse.json(
+      { message: "ดึงข้อมูลยาไม่สำเร็จ" },
+      { status: 500 },
+    );
   }
 }

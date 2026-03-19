@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { Prisma, treatment_status_enum } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { toDate, toHHmm } from "@/app/utils/dateFormat";
 
@@ -64,6 +65,50 @@ export async function GET(
     });
   } catch (error) {
     console.error("GET Treatment by ID Error:", error);
+    return NextResponse.json(
+      { message: "Internal server error", error: String(error) },
+      { status: 500 },
+    );
+  }
+}
+
+export async function PATCH(
+  _req: Request,
+  context: { params: Promise<{ id: string }> },
+) {
+  try {
+    const params = await context.params;
+    const id = parseInt(params.id, 10);
+
+    if (isNaN(id)) {
+      return NextResponse.json({ message: "Invalid id" }, { status: 400 });
+    }
+
+    const treatment = await prisma.treatment.update({
+      where: { id },
+      data: {
+        end_at: new Date(),
+        treatment_status: treatment_status_enum.COMPLETED,
+      },
+    });
+
+    return NextResponse.json({
+      message: "Treatment status updated successfully",
+      id: treatment.id,
+      status: treatment.treatment_status,
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2025"
+    ) {
+      return NextResponse.json(
+        { message: "Treatment not found" },
+        { status: 404 },
+      );
+    }
+
+    console.error("PATCH Treatment by ID Error:", error);
     return NextResponse.json(
       { message: "Internal server error", error: String(error) },
       { status: 500 },

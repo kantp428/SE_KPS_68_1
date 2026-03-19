@@ -3,9 +3,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format, parseISO } from "date-fns";
 import { th } from "date-fns/locale";
+import { Save } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
+import { toast } from "sonner";
 import * as z from "zod";
 
 import { Addmedicine } from "@/components/add-medicine";
@@ -22,6 +24,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -33,7 +36,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAddMedicineItems } from "@/hooks/useAddMedicineItems";
 import { useAddTreatmentItems } from "@/hooks/useAddTreatmentItems";
+import { useCompleteTreatment } from "@/hooks/useCompleteTreatment";
 import { useHealthProfile } from "@/hooks/useHealthProfile";
 import {
   formatGender,
@@ -42,8 +47,6 @@ import {
 } from "@/hooks/usePatientDetail";
 import { useServiceOptions } from "@/hooks/useServiceOptions";
 import { useUpdateHealthProfile } from "@/hooks/useUpdateHealthProfile";
-import { Save } from "lucide-react";
-import { toast } from "sonner";
 import axios from "axios";
 
 const STAFF_ID = 1; // TODO: replace with useContext/session
@@ -136,6 +139,8 @@ const DoctorPatientPage = () => {
   const [roomOptions, setRoomOptions] = useState<RoomOption[]>([]);
   const [history, setHistory] = useState<TxHistory[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingValues, setPendingValues] = useState<FormValues | null>(null);
 
   useEffect(() => {
     axios
@@ -156,12 +161,10 @@ const DoctorPatientPage = () => {
       })
       .then((response) =>
         setRoomOptions(
-          (response.data?.data || []).map(
-            (room: { id: number; name: string }) => ({
-              value: room.id,
-              label: room.name,
-            }),
-          ),
+          (response.data?.data || []).map((room: { id: number; name: string }) => ({
+            value: room.id,
+            label: room.name,
+          })),
         ),
       )
       .catch(() => {});
@@ -186,7 +189,11 @@ const DoctorPatientPage = () => {
   );
   const { patient, loading: patientLoading } = usePatientDetail(patientId);
   const { update, loading: saving } = useUpdateHealthProfile();
-  const { submit, loading: submitting } = useAddTreatmentItems();
+  const { complete, loading: completeSaving } = useCompleteTreatment();
+  const { submit: submitTreatmentItems, loading: treatmentItemsSaving } =
+    useAddTreatmentItems();
+  const { submit: submitMedicineItems, loading: medicineItemsSaving } =
+    useAddMedicineItems();
   const { options: serviceOptions } = useServiceOptions("", 100, 1);
 
   const methods = useForm<FormValues>({
@@ -225,56 +232,100 @@ const DoctorPatientPage = () => {
     });
   }, [getValues, profile, reset]);
 
-  const onSubmit = async (values: FormValues) => {
+  const saveTreatment = async (values: FormValues) => {
     if (!healthProfileId || !invoiceId || !patientId) {
       toast.error("ข้อมูลไม่ครบ ไม่สามารถบันทึกได้");
       return;
     }
 
-    try {
-      const existingVitals = (profile?.vitals ?? {}) as Record<string, unknown>;
+    const existingVitals = (profile?.vitals ?? {}) as Record<string, unknown>;
 
+    try {
       await update(healthProfileId, {
         vitals: {
           ...(existingVitals as object),
           tongue: values.tongue ?? null,
         } as never,
       });
-
-      await submit({
-        doctorId: STAFF_ID,
-        patientId,
-        healthProfileId,
-        invoiceId,
-        startAt: `${format(new Date(), "yyyy-MM-dd")}T${format(new Date(), "HH:mm")}:00`,
-        treatmentItems: values.treatmentItems ?? [],
-      });
-
-      toast.success("บันทึกข้อมูลสำเร็จ");
-      router.push("/doctor/treatment");
-      router.refresh();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "เกิดข้อผิดพลาด");
+      toast.error(
+        err instanceof Error ? err.message : "ไม่สามารถบันทึกข้อมูลลิ้นได้",
+      );
+      return;
     }
+
+    if (values.medicineItems?.length) {
+      try {
+        await submitMedicineItems({
+          invoiceId,
+          items: values.medicineItems,
+        });
+      } catch (err: unknown) {
+        toast.error(
+          err instanceof Error ? err.message : "ไม่สามารถบันทึกการจ่ายยาได้",
+        );
+        return;
+      }
+    }
+
+    if (values.treatmentItems?.length) {
+      try {
+        await submitTreatmentItems({
+          doctorId: STAFF_ID,
+          patientId,
+          healthProfileId,
+          invoiceId,
+          startAt: `${format(new Date(), "yyyy-MM-dd")}T${format(new Date(), "HH:mm")}:00`,
+          treatmentItems: values.treatmentItems,
+        });
+      } catch (err: unknown) {
+        toast.error(
+          err instanceof Error ? err.message : "ไม่สามารถบันทึกรายการรักษาได้",
+        );
+        return;
+      }
+    }
+
+    try {
+      await complete(treatmentId);
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : "ไม่สามารถอัปเดตสถานะการรักษาได้",
+      );
+      return;
+    }
+
+    toast.success("บันทึกข้อมูลสำเร็จ");
+    router.push("/doctor/treatment");
+    router.refresh();
   };
 
   const vitals = profile?.vitals as Record<string, unknown> | undefined;
+
+  const onSubmit = (values: FormValues) => {
+    setPendingValues(values);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmSave = async () => {
+    if (!pendingValues) return;
+
+    await saveTreatment(pendingValues);
+    setPendingValues(null);
+    setConfirmOpen(false);
+  };
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 p-6">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="/doctor/treatment">
-              คนไข้ของฉัน
-            </BreadcrumbLink>
+            <BreadcrumbLink href="/doctor/treatment">คนไข้ของฉัน</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbPage>
-              {patientLoading
-                ? "กำลังโหลด..."
-                : (patient?.fullName ?? "ข้อมูลคนไข้")}
+              {patientLoading ? "กำลังโหลด..." : patient?.fullName ?? "ข้อมูลคนไข้"}
             </BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
@@ -346,16 +397,8 @@ const DoctorPatientPage = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-3 gap-4">
-                    <StatItem
-                      label="น้ำหนัก"
-                      value={profile.weight}
-                      unit="kg"
-                    />
-                    <StatItem
-                      label="ส่วนสูง"
-                      value={profile.height}
-                      unit="cm"
-                    />
+                    <StatItem label="น้ำหนัก" value={profile.weight} unit="kg" />
+                    <StatItem label="ส่วนสูง" value={profile.height} unit="cm" />
                     <StatItem label="ความดัน" value={profile.bp} unit="mmHg" />
                   </div>
 
@@ -418,14 +461,34 @@ const DoctorPatientPage = () => {
                 <Button
                   type="submit"
                   className="flex-1"
-                  disabled={saving || submitting}
+                  disabled={
+                    saving ||
+                    completeSaving ||
+                    treatmentItemsSaving ||
+                    medicineItemsSaving
+                  }
                 >
                   <Save className="mr-2 h-4 w-4" />
-                  {saving || submitting ? "กำลังบันทึก..." : "บันทึก"}
+                  {saving ||
+                  completeSaving ||
+                  treatmentItemsSaving ||
+                  medicineItemsSaving
+                    ? "กำลังบันทึก..."
+                    : "บันทึก"}
                 </Button>
               </div>
             </form>
           </FormProvider>
+
+          <ConfirmDialog
+            open={confirmOpen}
+            onOpenChange={setConfirmOpen}
+            title="ยืนยันการบันทึก"
+            description="ต้องการบันทึกข้อมูลการรักษานี้ใช่หรือไม่"
+            onConfirm={handleConfirmSave}
+            cancelText="ยกเลิก"
+            confirmText="บันทึก"
+          />
         </TabsContent>
 
         <TabsContent value="history" className="mt-4">
