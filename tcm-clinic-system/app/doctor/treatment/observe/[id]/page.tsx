@@ -5,9 +5,12 @@ import { format, parseISO } from "date-fns";
 import { th } from "date-fns/locale";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { FormProvider, useFieldArray, useForm } from "react-hook-form";
+import { FormProvider, useForm } from "react-hook-form";
 import * as z from "zod";
 
+import { Addmedicine } from "@/components/add-medicine";
+import { TongueInput } from "@/components/custom/tongue-input";
+import { TreatmentItemForm } from "@/components/custom/treatment-item-form";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
@@ -21,7 +24,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Addmedicine } from "@/components/add-medicine";
 import {
   Table,
   TableBody,
@@ -31,11 +33,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Save } from "lucide-react";
-import { toast } from "sonner";
-
-import { TongueInput } from "@/components/custom/tongue-input";
-import { TreatmentItemForm } from "@/components/custom/treatment-item-form";
 import { useAddTreatmentItems } from "@/hooks/useAddTreatmentItems";
 import { useHealthProfile } from "@/hooks/useHealthProfile";
 import {
@@ -45,13 +42,21 @@ import {
 } from "@/hooks/usePatientDetail";
 import { useServiceOptions } from "@/hooks/useServiceOptions";
 import { useUpdateHealthProfile } from "@/hooks/useUpdateHealthProfile";
+import { Save } from "lucide-react";
+import { toast } from "sonner";
 import axios from "axios";
 
 const STAFF_ID = 1; // TODO: replace with useContext/session
 
 const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
-  IN_PROGRESS: { label: "กำลังดำเนินการ", cls: "bg-blue-50 text-blue-800" },
-  COMPLETED: { label: "สำเร็จ", cls: "bg-emerald-50 text-emerald-800" },
+  IN_PROGRESS: {
+    label: "กำลังดำเนินการ",
+    cls: "bg-blue-50 text-blue-800",
+  },
+  COMPLETED: {
+    label: "สำเร็จ",
+    cls: "bg-emerald-50 text-emerald-800",
+  },
 };
 
 const schema = z.object({
@@ -76,8 +81,8 @@ const schema = z.object({
   medicineItems: z
     .array(
       z.object({
-        medId: z.number().int().positive("à¸à¸£à¸¸à¸“à¸²à¹€à¸¥à¸·à¸­à¸à¸¢à¸²"),
-        quantity: z.number().int().positive("à¸à¸£à¸¸à¸“à¸²à¸£à¸°à¸šà¸¸à¸ˆà¸³à¸™à¸§à¸™"),
+        medId: z.number().int().positive("กรุณาเลือกยา"),
+        quantity: z.number().int().positive("กรุณาระบุจำนวน"),
       }),
     )
     .optional(),
@@ -85,6 +90,7 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 type RoomOption = { value: number; label: string };
+
 interface TxHistory {
   id: number;
   serviceName: string;
@@ -108,7 +114,7 @@ function StatItem({
     <div className="flex flex-col gap-0.5">
       <span className="text-xs text-muted-foreground">{label}</span>
       <span className="text-sm font-semibold">
-        {value ?? "—"}
+        {value ?? "-"}
         {value != null && unit && (
           <span className="ml-1 text-xs font-normal text-muted-foreground">
             {unit}
@@ -134,12 +140,12 @@ const DoctorPatientPage = () => {
   useEffect(() => {
     axios
       .get(`/api/treatment/${treatmentId}`)
-      .then((r) => {
-        const t = r.data;
-        if (t) {
-          setHealthProfileId(t.healthProfileId ?? null);
-          setPatientId(t.patientId ?? null);
-          setInvoiceId(t.invoiceId ?? null);
+      .then((response) => {
+        const treatment = response.data;
+        if (treatment) {
+          setHealthProfileId(treatment.healthProfileId ?? null);
+          setPatientId(treatment.patientId ?? null);
+          setInvoiceId(treatment.invoiceId ?? null);
         }
       })
       .catch(() => {});
@@ -148,12 +154,14 @@ const DoctorPatientPage = () => {
       .get("/api/room", {
         params: { limit: 100, page: 1, status: "AVAILABLE" },
       })
-      .then((r) =>
+      .then((response) =>
         setRoomOptions(
-          (r.data?.data || []).map((room: { id: number; name: string }) => ({
-            value: room.id,
-            label: room.name,
-          })),
+          (response.data?.data || []).map(
+            (room: { id: number; name: string }) => ({
+              value: room.id,
+              label: room.name,
+            }),
+          ),
         ),
       )
       .catch(() => {});
@@ -161,12 +169,13 @@ const DoctorPatientPage = () => {
 
   useEffect(() => {
     if (!patientId) return;
+
     setHistoryLoading(true);
     axios
       .get("/api/treatment/med-assist", {
         params: { page: 1, limit: 50, patientId },
       })
-      .then((r) => setHistory(r.data?.data || []))
+      .then((response) => setHistory(response.data?.data || []))
       .catch(() => setHistory([]))
       .finally(() => setHistoryLoading(false));
   }, [patientId]);
@@ -195,49 +204,43 @@ const DoctorPatientPage = () => {
       medicineItems: [],
     },
   });
-  const {
-    control,
-    watch,
-    handleSubmit,
-    formState: { errors },
-  } = methods;
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "treatmentItems",
-  });
-  const selectedCoating = watch("tongue.coating");
+  const { getValues, handleSubmit, reset } = methods;
 
   useEffect(() => {
     if (!profile) return;
-    const v = profile.vitals as Record<string, unknown>;
-    const t = (v?.tongue ?? {}) as Record<string, unknown>;
-    methods.reset({
-      ...methods.getValues(),
+
+    const vitals = profile.vitals as Record<string, unknown>;
+    const tongue = (vitals?.tongue ?? {}) as Record<string, unknown>;
+
+    reset({
+      ...getValues(),
       tongue: {
-        color: (t.color as string) ?? undefined,
-        coating: (t.coating as string) ?? undefined,
-        moisture: (t.moisture as string) ?? undefined,
-        shape: (t.shape as string) ?? undefined,
-        cracks: (t.cracks as boolean) ?? false,
-        toothMarks: (t.toothMarks as boolean) ?? false,
+        color: (tongue.color as string) ?? undefined,
+        coating: (tongue.coating as string) ?? undefined,
+        moisture: (tongue.moisture as string) ?? undefined,
+        shape: (tongue.shape as string) ?? undefined,
+        cracks: (tongue.cracks as boolean) ?? false,
+        toothMarks: (tongue.toothMarks as boolean) ?? false,
       },
     });
-  }, [profile]);
+  }, [getValues, profile, reset]);
 
   const onSubmit = async (values: FormValues) => {
-    console.log(values);
     if (!healthProfileId || !invoiceId || !patientId) {
       toast.error("ข้อมูลไม่ครบ ไม่สามารถบันทึกได้");
       return;
     }
+
     try {
       const existingVitals = (profile?.vitals ?? {}) as Record<string, unknown>;
+
       await update(healthProfileId, {
         vitals: {
           ...(existingVitals as object),
           tongue: values.tongue ?? null,
         } as never,
       });
+
       await submit({
         doctorId: STAFF_ID,
         patientId,
@@ -246,6 +249,7 @@ const DoctorPatientPage = () => {
         startAt: `${format(new Date(), "yyyy-MM-dd")}T${format(new Date(), "HH:mm")}:00`,
         treatmentItems: values.treatmentItems ?? [],
       });
+
       toast.success("บันทึกข้อมูลสำเร็จ");
       router.push("/doctor/treatment");
       router.refresh();
@@ -258,7 +262,6 @@ const DoctorPatientPage = () => {
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 p-6">
-      {/* Breadcrumb */}
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -277,7 +280,6 @@ const DoctorPatientPage = () => {
         </BreadcrumbList>
       </Breadcrumb>
 
-      {/* ── Patient Card ── */}
       {patientLoading ? (
         <Card>
           <CardContent className="pt-5">
@@ -291,12 +293,12 @@ const DoctorPatientPage = () => {
               <div className="flex items-start justify-between">
                 <div>
                   <CardTitle className="text-lg">{patient.fullName}</CardTitle>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="mt-0.5 text-xs text-muted-foreground">
                     {patient.thaiId}
                   </p>
                 </div>
                 <Badge variant="outline" className="text-sm font-bold">
-                  หมู่เลือด {patient.bloodGroup || "—"}
+                  หมู่เลือด {patient.bloodGroup || "-"}
                 </Badge>
               </div>
             </CardHeader>
@@ -315,7 +317,6 @@ const DoctorPatientPage = () => {
         )
       )}
 
-      {/* ── Tabs ── */}
       <Tabs defaultValue="examine">
         <TabsList className="w-full">
           <TabsTrigger value="examine" className="flex-1">
@@ -326,13 +327,12 @@ const DoctorPatientPage = () => {
           </TabsTrigger>
         </TabsList>
 
-        {/* Tab: ตรวจวินิจฉัย */}
-        <TabsContent value="examine" className="space-y-4 mt-4">
+        <TabsContent value="examine" className="mt-4 space-y-4">
           {profileLoading ? (
             <Card>
-              <CardContent className="pt-4 space-y-3">
-                {[0, 1].map((i) => (
-                  <Skeleton key={i} className="h-10 w-full" />
+              <CardContent className="space-y-3 pt-4">
+                {[0, 1].map((index) => (
+                  <Skeleton key={index} className="h-10 w-full" />
                 ))}
               </CardContent>
             </Card>
@@ -358,6 +358,7 @@ const DoctorPatientPage = () => {
                     />
                     <StatItem label="ความดัน" value={profile.bp} unit="mmHg" />
                   </div>
+
                   {vitals && (
                     <>
                       <Separator />
@@ -385,10 +386,11 @@ const DoctorPatientPage = () => {
                       </div>
                     </>
                   )}
+
                   <Separator />
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">อาการ</p>
-                    <p className="text-sm">{profile.symptoms || "—"}</p>
+                    <p className="mb-1 text-xs text-muted-foreground">อาการ</p>
+                    <p className="text-sm">{profile.symptoms || "-"}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -397,10 +399,7 @@ const DoctorPatientPage = () => {
 
           <FormProvider {...methods}>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              {/* การตรวจลิ้น */}
               <TongueInput />
-
-              {/* เพิ่มบริการ */}
               <TreatmentItemForm
                 serviceOptions={serviceOptions}
                 roomOptions={roomOptions}
@@ -429,7 +428,6 @@ const DoctorPatientPage = () => {
           </FormProvider>
         </TabsContent>
 
-        {/* Tab: ประวัติการรักษา */}
         <TabsContent value="history" className="mt-4">
           <Card>
             <CardHeader className="pb-3">
@@ -448,10 +446,10 @@ const DoctorPatientPage = () => {
                 </TableHeader>
                 <TableBody>
                   {historyLoading ? (
-                    Array.from({ length: 4 }).map((_, i) => (
-                      <TableRow key={i}>
-                        {[0, 1, 2, 3, 4].map((j) => (
-                          <TableCell key={j}>
+                    Array.from({ length: 4 }).map((_, index) => (
+                      <TableRow key={index}>
+                        {[0, 1, 2, 3, 4].map((cell) => (
+                          <TableCell key={cell}>
                             <Skeleton className="h-4 w-full" />
                           </TableCell>
                         ))}
@@ -467,37 +465,38 @@ const DoctorPatientPage = () => {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    history.map((h) => {
-                      const s = STATUS_LABEL[h.status] ?? {
-                        label: h.status,
+                    history.map((item) => {
+                      const status = STATUS_LABEL[item.status] ?? {
+                        label: item.status,
                         cls: "",
                       };
+
                       return (
-                        <TableRow key={h.id}>
+                        <TableRow key={item.id}>
                           <TableCell className="font-medium">
-                            {h.serviceName}
+                            {item.serviceName}
                           </TableCell>
                           <TableCell className="text-center">
-                            {h.roomName}
+                            {item.roomName}
                           </TableCell>
                           <TableCell className="text-center">
                             <Badge
                               variant="secondary"
                               className="bg-emerald-50 text-emerald-800"
                             >
-                              {h.date
-                                ? format(parseISO(h.date), "dd/MM/yyyy", {
+                              {item.date
+                                ? format(parseISO(item.date), "dd/MM/yyyy", {
                                     locale: th,
                                   })
                                 : "-"}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-center text-xs text-muted-foreground whitespace-nowrap">
-                            {h.startAt} – {h.endAt}
+                          <TableCell className="whitespace-nowrap text-center text-xs text-muted-foreground">
+                            {item.startAt} - {item.endAt}
                           </TableCell>
                           <TableCell className="text-center">
-                            <Badge variant="secondary" className={s.cls}>
-                              {s.label}
+                            <Badge variant="secondary" className={status.cls}>
+                              {status.label}
                             </Badge>
                           </TableCell>
                         </TableRow>
