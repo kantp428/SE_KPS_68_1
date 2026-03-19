@@ -56,9 +56,7 @@ export function DoctorAppSidebar() {
 
               <div className="grid flex-1 text-left text-sm leading-tight group-data-[state=collapsed]:hidden">
                 <span className="truncate font-semibold">{user.name}</span>
-                <span className="truncate text-xs text-white/70">
-                  {user.role}
-                </span>
+                <span className="truncate text-xs">{user.role}</span>
               </div>
               <ChevronsUpDown className="ml-auto size-4 group-data-[state=collapsed]:hidden opacity-50" />
             </SidebarMenuButton>
