@@ -102,7 +102,7 @@ export default function PaymentPage() {
 
       const res = await fetch(`/api/invoice?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to fetch");
-      
+
       const json = await res.json();
       setList(json.data);
       setTotalPages(json.pagination.totalPages || 1);
@@ -128,19 +128,18 @@ export default function PaymentPage() {
   const handlePayment = async (id: string) => {
     try {
       // สมมติว่ามี API สำหรับอัปเดตสถานะ (ถ้ายังไม่มี โค้ดนี้จะจำลองการเปลี่ยนสถานะให้ก่อน)
-      
-      const res = await fetch('/api/invoice', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status: 'PAID' })
+
+      const res = await fetch("/api/invoice", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status: "PAID" }),
       });
       if (!res.ok) throw new Error("API error");
-      
-      
+
       // อัปเดต UI ทันที (ไม่ต้องรอ Refresh)
-      setList((prev) => prev.filter((item) => item.id !== id)); 
+      setList((prev) => prev.filter((item) => item.id !== id));
       toast.success("ชำระเงินเรียบร้อยแล้ว");
-      
+
       // ถ้าอยากให้โหลดข้อมูลใหม่ทั้งหมด ให้เรียก fetchInvoices()
     } catch (error) {
       toast.error("เกิดข้อผิดพลาดในการชำระเงิน");
@@ -176,7 +175,9 @@ export default function PaymentPage() {
               onClick={handleRefresh}
               disabled={loading}
             >
-              <RefreshCcw className={cn("w-4 h-4", loading && "animate-spin")} />
+              <RefreshCcw
+                className={cn("w-4 h-4", loading && "animate-spin")}
+              />
             </Button>
           </div>
         </div>
@@ -198,11 +199,15 @@ export default function PaymentPage() {
                 variant={"outline"}
                 className={cn(
                   "w-full justify-start text-left font-normal h-10",
-                  !selectedDate && "text-muted-foreground"
+                  !selectedDate && "text-muted-foreground",
                 )}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {selectedDate ? format(selectedDate, "PPP", { locale: th }) : <span>เลือกวันที่...</span>}
+                {selectedDate ? (
+                  format(selectedDate, "PPP", { locale: th })
+                ) : (
+                  <span>เลือกวันที่...</span>
+                )}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -222,9 +227,13 @@ export default function PaymentPage() {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead className="text-center min-w-[120px]">เลขที่ใบเสร็จ</TableHead>
-              <TableHead className="text-center min-w-[150px]">คนไข้</TableHead>
-              <TableHead className="text-center min-w-[120px]">ยอดชำระ (บาท)</TableHead>
+              <TableHead className="text-center min-w-30">
+                เลขที่ใบเสร็จ
+              </TableHead>
+              <TableHead className="text-center min-w-37.5">คนไข้</TableHead>
+              <TableHead className="text-center min-w-30">
+                ยอดชำระ (บาท)
+              </TableHead>
               <TableHead className="w-32 text-center">วันที่</TableHead>
               <TableHead className="w-28 text-center">เวลา</TableHead>
               <TableHead className="w-40 text-center">จัดการ</TableHead>
@@ -234,11 +243,21 @@ export default function PaymentPage() {
             {loading ? (
               Array.from({ length: 5 }).map((_, index) => (
                 <TableRow key={index}>
-                  <TableCell><Skeleton className="h-5 w-24 mx-auto bg-muted" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-32 mx-auto bg-muted" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-20 mx-auto bg-muted" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-24 mx-auto bg-muted" /></TableCell>
-                  <TableCell><Skeleton className="h-7 w-16 mx-auto rounded-full bg-muted" /></TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-24 mx-auto bg-muted" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-32 mx-auto bg-muted" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-20 mx-auto bg-muted" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-24 mx-auto bg-muted" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-7 w-16 mx-auto rounded-full bg-muted" />
+                  </TableCell>
                   <TableCell>
                     <div className="flex justify-center gap-2">
                       <Skeleton className="h-8 w-20 rounded-md bg-muted" />
@@ -249,7 +268,10 @@ export default function PaymentPage() {
               ))
             ) : list.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                <TableCell
+                  colSpan={6}
+                  className="text-center py-10 text-muted-foreground"
+                >
                   ไม่พบข้อมูลใบเสร็จ
                 </TableCell>
               </TableRow>
@@ -265,13 +287,15 @@ export default function PaymentPage() {
                   </TableCell>
                   <TableCell className="text-center">{r.date}</TableCell>
                   <TableCell className="text-center">
-                    <Badge variant="secondary" className="border-blue-950 bg-blue-50 text-blue-900">
+                    <Badge
+                      variant="secondary"
+                      className="border-blue-950 bg-blue-50 text-blue-900"
+                    >
                       {r.time}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-center">
                     <div className="flex justify-center gap-2">
-                      
                       {/* 1. ปุ่มดูใบเสร็จ */}
                       <Dialog>
                         <DialogTrigger asChild>
@@ -282,18 +306,20 @@ export default function PaymentPage() {
                         </DialogTrigger>
                         <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh] bg-muted">
                           <DialogHeader className="sr-only">
-                            <DialogTitle>ใบเสร็จรับเงิน - {r.patientName}</DialogTitle>
+                            <DialogTitle>
+                              ใบเสร็จรับเงิน - {r.patientName}
+                            </DialogTitle>
                           </DialogHeader>
                           <div className="p-2">
                             {/* เรียกใช้ Component ใบเสร็จต้นฉบับของคุณตรงนี้! */}
-                            <ReceiptCard 
+                            <ReceiptCard
                               data={{
                                 receiptNumber: r.receiptNumber,
                                 date: r.date,
                                 patientName: r.patientName,
                                 items: r.items,
-                                total: r.total
-                              }} 
+                                total: r.total,
+                              }}
                             />
                           </div>
                         </DialogContent>
@@ -303,28 +329,37 @@ export default function PaymentPage() {
                       {tab === "UNPAID" && (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                            <Button
+                              size="sm"
+                              className="bg-blue-600 hover:bg-blue-700"
+                            >
                               <CheckCircle className="w-4 h-4 mr-1" />
                               ชำระเงิน
                             </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>ยืนยันการรับชำระเงิน</AlertDialogTitle>
+                              <AlertDialogTitle>
+                                ยืนยันการรับชำระเงิน
+                              </AlertDialogTitle>
                               <AlertDialogDescription>
-                                คุณได้รับเงินจำนวน <strong>฿{r.total.toLocaleString()}</strong> จากคุณ <strong>{r.patientName}</strong> ครบถ้วนแล้วใช่หรือไม่?
+                                คุณได้รับเงินจำนวน{" "}
+                                <strong>฿{r.total.toLocaleString()}</strong>{" "}
+                                จากคุณ <strong>{r.patientName}</strong>{" "}
+                                ครบถ้วนแล้วใช่หรือไม่?
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handlePayment(r.id)}>
+                              <AlertDialogAction
+                                onClick={() => handlePayment(r.id)}
+                              >
                                 ยืนยันชำระเงิน
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
                       )}
-
                     </div>
                   </TableCell>
                 </TableRow>
@@ -344,24 +379,35 @@ export default function PaymentPage() {
             <PaginationContent>
               <PaginationItem>
                 <PaginationPrevious
-                  className={cn("cursor-pointer", currentPage === 1 && "pointer-events-none opacity-40")}
+                  className={cn(
+                    "cursor-pointer",
+                    currentPage === 1 && "pointer-events-none opacity-40",
+                  )}
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 />
               </PaginationItem>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
-                <PaginationItem key={num} className="cursor-pointer">
-                  <PaginationLink
-                    isActive={currentPage === num}
-                    onClick={() => setCurrentPage(num)}
-                  >
-                    {num}
-                  </PaginationLink>
-                </PaginationItem>
-              ))}
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                (num) => (
+                  <PaginationItem key={num} className="cursor-pointer">
+                    <PaginationLink
+                      isActive={currentPage === num}
+                      onClick={() => setCurrentPage(num)}
+                    >
+                      {num}
+                    </PaginationLink>
+                  </PaginationItem>
+                ),
+              )}
               <PaginationItem>
                 <PaginationNext
-                  className={cn("cursor-pointer", currentPage === totalPages && "pointer-events-none opacity-40")}
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  className={cn(
+                    "cursor-pointer",
+                    currentPage === totalPages &&
+                      "pointer-events-none opacity-40",
+                  )}
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
                 />
               </PaginationItem>
             </PaginationContent>

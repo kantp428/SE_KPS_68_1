@@ -35,20 +35,68 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-const optionalNumber = z.preprocess((value) => {
-  if (value === "" || value === null || Number.isNaN(value)) return undefined;
+const normalizeNumberInput = (value: unknown) => {
+  if (value === "" || value === null || value === undefined) return undefined;
+
+  if (typeof value === "number") {
+    return Number.isNaN(value) ? undefined : value;
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? value : parsed;
+  }
+
   return value;
-}, z.number().optional());
+};
+
+const requiredPositiveNumber = (
+  requiredMessage: string,
+  positiveMessage: string,
+  integer = false,
+): z.ZodPipe<z.ZodTransform<unknown, unknown>, z.ZodNumber> =>
+  z.preprocess(
+    normalizeNumberInput,
+    (integer
+      ? z.number({
+          error: (issue) =>
+            issue.input === undefined
+              ? requiredMessage
+              : "กรุณากรอกตัวเลขจำนวนเต็มให้ถูกต้อง",
+        })
+      : z.number({
+          error: (issue) =>
+            issue.input === undefined
+              ? requiredMessage
+              : "กรุณากรอกตัวเลขให้ถูกต้อง",
+        })
+    ).refine(
+      (value) => (integer ? Number.isInteger(value) : true) && value > 0,
+      { message: positiveMessage },
+    ),
+  );
+
+const optionalNumber: z.ZodPipe<
+  z.ZodTransform<unknown, unknown>,
+  z.ZodOptional<z.ZodNumber>
+> = z.preprocess(
+  normalizeNumberInput,
+  z.number({ error: "กรุณากรอกตัวเลขให้ถูกต้อง" }).optional(),
+);
 
 const formSchema = z.object({
-  patientId: z.number().int().positive("กรุณาเลือกคนไข้"),
-  doctorId: z.number().int().positive("กรุณาเลือกแพทย์"),
-  roomId: z.number().int().positive("กรุณาเลือกห้อง"),
+  patientId: requiredPositiveNumber("กรุณาเลือกคนไข้", "กรุณาเลือกคนไข้", true),
+  doctorId: requiredPositiveNumber("กรุณาเลือกแพทย์", "กรุณาเลือกแพทย์", true),
+  roomId: requiredPositiveNumber("กรุณาเลือกห้อง", "กรุณาเลือกห้อง", true),
   startAt: z.string().min(1, "กรุณาเลือกเวลาเริ่ม"),
   healthProfile: z.object({
-    weight: z.number().positive("น้ำหนักต้องมากกว่า 0"),
-    height: z.number().positive("ส่วนสูงต้องมากกว่า 0"),
-    bp: z.number().int().positive("ความดันต้องมากกว่า 0"),
+    weight: requiredPositiveNumber("กรุณากรอกน้ำหนัก", "น้ำหนักต้องมากกว่า 0"),
+    height: requiredPositiveNumber("กรุณากรอกส่วนสูง", "ส่วนสูงต้องมากกว่า 0"),
+    bp: requiredPositiveNumber(
+      "กรุณากรอกความดันโลหิต",
+      "ความดันต้องมากกว่า 0",
+      true,
+    ),
     symptoms: z.string().min(1, "กรุณากรอกอาการ"),
     temperature: optionalNumber,
     pulse: optionalNumber,
@@ -134,8 +182,8 @@ const NewTreatmentPage = () => {
     },
   });
 
-  const selectedPatientId = watch("patientId");
-  const startAt = watch("startAt");
+  const selectedPatientId = Number(watch("patientId") ?? 0);
+  const startAt = String(watch("startAt") ?? "");
   const selectedTime = useMemo(
     () => startAt || format(new Date(), "HH:mm"),
     [startAt],
@@ -220,6 +268,10 @@ const NewTreatmentPage = () => {
     }
   };
 
+  const onInvalid = () => {
+    toast.error("กรุณากรอกข้อมูลให้ครบถ้วนและถูกต้อง");
+  };
+
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6">
       <BreadcrumbCustom
@@ -231,7 +283,7 @@ const NewTreatmentPage = () => {
 
       <h1 className="text-2xl font-bold tracking-tight">เพิ่มการบำบัดใหม่</h1>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6">
         {/* ── 1) เลือกคนไข้ ── */}
         <Card>
           <CardHeader>
@@ -252,23 +304,27 @@ const NewTreatmentPage = () => {
                 <Controller
                   control={control}
                   name="patientId"
-                  render={({ field }) => (
-                    <Select
-                      value={field.value > 0 ? String(field.value) : ""}
-                      onValueChange={(v) => field.onChange(Number(v))}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="เลือกคนไข้" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {patientOptions.map((o) => (
-                          <SelectItem key={o.value} value={String(o.value)}>
-                            {o.label} | {o.thaiId}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
+                  render={({ field }) => {
+                    const patientIdValue = Number(field.value ?? 0);
+
+                    return (
+                      <Select
+                        value={patientIdValue > 0 ? String(patientIdValue) : ""}
+                        onValueChange={(v) => field.onChange(Number(v))}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="เลือกคนไข้" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {patientOptions.map((o) => (
+                            <SelectItem key={o.value} value={String(o.value)}>
+                              {o.label} | {o.thaiId}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    );
+                  }}
                 />
                 {errors.patientId && (
                   <p className="text-xs text-destructive">
@@ -441,9 +497,9 @@ const NewTreatmentPage = () => {
                   control={control}
                   name="startAt"
                   render={({ field }) => {
-                    const [hour = "00", minute = "00"] = (
-                      field.value || "00:00"
-                    ).split(":");
+                    const startAtValue = String(field.value ?? "00:00");
+                    const [hour = "00", minute = "00"] =
+                      startAtValue.split(":");
                     return (
                       <Popover>
                         <PopoverTrigger asChild>
@@ -453,7 +509,7 @@ const NewTreatmentPage = () => {
                             className="w-full justify-start font-normal"
                           >
                             <Clock3 className="mr-2 h-4 w-4" />
-                            {field.value || "เลือกเวลา"}
+                            {startAtValue || "เลือกเวลา"}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-3">
@@ -513,23 +569,27 @@ const NewTreatmentPage = () => {
                 <Controller
                   control={control}
                   name="doctorId"
-                  render={({ field }) => (
-                    <Select
-                      value={field.value > 0 ? String(field.value) : ""}
-                      onValueChange={(v) => field.onChange(Number(v))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="เลือกแพทย์" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {doctorOptions.map((o) => (
-                          <SelectItem key={o.value} value={String(o.value)}>
-                            {o.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
+                  render={({ field }) => {
+                    const doctorIdValue = Number(field.value ?? 0);
+
+                    return (
+                      <Select
+                        value={doctorIdValue > 0 ? String(doctorIdValue) : ""}
+                        onValueChange={(v) => field.onChange(Number(v))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="เลือกแพทย์" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {doctorOptions.map((o) => (
+                            <SelectItem key={o.value} value={String(o.value)}>
+                              {o.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    );
+                  }}
                 />
                 {errors.doctorId && (
                   <p className="text-xs text-destructive">
@@ -565,23 +625,27 @@ const NewTreatmentPage = () => {
               <Controller
                 control={control}
                 name="roomId"
-                render={({ field }) => (
-                  <Select
-                    value={field.value > 0 ? String(field.value) : ""}
-                    onValueChange={(v) => field.onChange(Number(v))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="เลือกห้อง" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {roomOptions.map((o) => (
-                        <SelectItem key={o.value} value={String(o.value)}>
-                          {o.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+                render={({ field }) => {
+                  const roomIdValue = Number(field.value ?? 0);
+
+                  return (
+                    <Select
+                      value={roomIdValue > 0 ? String(roomIdValue) : ""}
+                      onValueChange={(v) => field.onChange(Number(v))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="เลือกห้อง" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {roomOptions.map((o) => (
+                          <SelectItem key={o.value} value={String(o.value)}>
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  );
+                }}
               />
               {errors.roomId && (
                 <p className="text-xs text-destructive">

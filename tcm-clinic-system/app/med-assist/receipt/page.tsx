@@ -1,13 +1,14 @@
 "use client";
 
-import React from 'react';
-import ReceiptCard from '@/components/receipt/ReceiptCard';
+import ReceiptCard from "@/components/receipt/ReceiptCard";
 
 export default function ReceiptPage() {
   const mockReceiptData = {
     receiptNumber: "0001",
-    date: new Date().toLocaleDateString('th-TH', { 
-      year: 'numeric', month: 'long', day: 'numeric' 
+    date: new Date().toLocaleDateString("th-TH", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     }),
     patientName: "คุณ กฤษณัส รักษาดี",
     items: [
@@ -27,8 +28,10 @@ export default function ReceiptPage() {
     <div className="min-h-screen bg-gray-100 p-8">
       {/* ส่วนควบคุม (ปุ่มต่างๆ) จะถูกซ่อนตอนพิมพ์ด้วยคลาส hide-on-print */}
       <div className="max-w-2xl mx-auto mb-6 flex justify-between items-center hide-on-print">
-        <h1 className="text-2xl font-bold text-gray-800">จัดการใบเสร็จรับเงิน</h1>
-        <button 
+        <h1 className="text-2xl font-bold text-gray-800">
+          จัดการใบเสร็จรับเงิน
+        </h1>
+        <button
           onClick={handlePrint}
           className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md shadow transition-colors"
         >

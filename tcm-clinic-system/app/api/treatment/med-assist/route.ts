@@ -167,7 +167,7 @@ export async function POST(req: Request) {
       const [doctor, patient, observeService, room] = await Promise.all([
         prisma.staff.findUnique({ where: { id: doctorId } }),
         prisma.patient.findUnique({ where: { id: patientId } }),
-        prisma.service.findUnique({
+        prisma.service.findFirst({
           where: {
             id: OBSERVE_ID,
             status: service_status_enum.AVAILABLE,
