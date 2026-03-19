@@ -71,7 +71,6 @@ interface InvoiceData {
   status: InvoiceStatus;
   date: string;
   time: string;
-  items: Array<{ name: string; qty: number; price: number }>;
 }
 
 export default function PaymentPage() {
@@ -312,15 +311,7 @@ export default function PaymentPage() {
                           </DialogHeader>
                           <div className="p-2">
                             {/* เรียกใช้ Component ใบเสร็จต้นฉบับของคุณตรงนี้! */}
-                            <ReceiptCard
-                              data={{
-                                receiptNumber: r.receiptNumber,
-                                date: r.date,
-                                patientName: r.patientName,
-                                items: r.items,
-                                total: r.total,
-                              }}
-                            />
+                            <ReceiptCard id={r.id} />
                           </div>
                         </DialogContent>
                       </Dialog>
