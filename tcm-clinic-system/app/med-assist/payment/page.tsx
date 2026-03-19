@@ -1,16 +1,9 @@
 "use client";
 
-import ReceiptCard from "@/components/receipt/ReceiptCard"; // อ้างอิง Component ใบเสร็จของคุณ
+import ReceiptCard from "@/components/receipt/ReceiptCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +15,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Pagination,
@@ -46,7 +46,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useDebounce } from "@/hooks/use-debounce"; // ใช้ Hook เดิมของคุณ
+import { useDebounce } from "@/hooks/use-debounce";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
@@ -57,20 +57,30 @@ import {
   RefreshCcw,
   Search,
 } from "lucide-react";
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
-// กำหนดรูปร่างข้อมูลที่รับมาจาก API
-type InvoiceStatus = "UNPAID" | "PAID";
+type PaymentTab = "IN_PROGRESS" | "PAYMENT";
+
+interface InvoiceItem {
+  name: string;
+  qty: number;
+  price: number;
+  treatmentStatus: "IN_PROGRESS" | "COMPLETED" | null;
+}
 
 interface InvoiceData {
   id: string;
   receiptNumber: string;
   patientName: string;
   total: number;
-  status: InvoiceStatus;
+  status: "UNPAID" | "PAID";
   date: string;
   time: string;
+  treatmentCount: number;
+  allTreatmentsCompleted: boolean;
+  canPay: boolean;
+  items: InvoiceItem[];
 }
 
 export default function PaymentPage() {
@@ -80,42 +90,41 @@ export default function PaymentPage() {
   const [limit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-
-  const [tab, setTab] = useState<InvoiceStatus>("UNPAID");
+  const [tab, setTab] = useState<PaymentTab>("IN_PROGRESS");
   const [nameSearch, setNameSearch] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
 
   const debouncedNameSearch = useDebounce(nameSearch, 500);
 
-  // ฟังก์ชันดึงข้อมูลจาก API สไตล์เดียวกับต้นฉบับ
   const fetchInvoices = useCallback(async () => {
     setLoading(true);
+
     try {
-      // สร้าง Query String
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: limit.toString(),
-        status: tab,
+        status: "UNPAID",
+        mode: tab === "IN_PROGRESS" ? "in_progress" : "payment",
         ...(debouncedNameSearch && { name: debouncedNameSearch }),
+        ...(selectedDate && { date: format(selectedDate, "yyyy-MM-dd") }),
       });
 
-      const res = await fetch(`/api/invoice?${params.toString()}`);
-      if (!res.ok) throw new Error("Failed to fetch");
+      const response = await fetch(`/api/invoice?${params.toString()}`);
+      if (!response.ok) throw new Error("Failed to fetch invoices");
 
-      const json = await res.json();
+      const json = await response.json();
       setList(json.data);
       setTotalPages(json.pagination.totalPages || 1);
       setTotalItems(json.pagination.total || 0);
-    } catch (error) {
+    } catch {
       toast.error("ไม่สามารถดึงข้อมูลใบเสร็จได้");
     } finally {
       setLoading(false);
     }
-  }, [currentPage, limit, tab, debouncedNameSearch]);
+  }, [currentPage, limit, tab, debouncedNameSearch, selectedDate]);
 
-  // ดึงข้อมูลเมื่อตัวแปรเปลี่ยน
   useEffect(() => {
-    fetchInvoices();
+    void fetchInvoices();
   }, [fetchInvoices]);
 
   const handleRefresh = async () => {
@@ -123,65 +132,61 @@ export default function PaymentPage() {
     toast.success("อัปเดตข้อมูลเรียบร้อยแล้ว");
   };
 
-  // ฟังก์ชันยืนยันชำระเงิน (ต้องมี API PATCH รองรับในอนาคต)
   const handlePayment = async (id: string) => {
     try {
-      // สมมติว่ามี API สำหรับอัปเดตสถานะ (ถ้ายังไม่มี โค้ดนี้จะจำลองการเปลี่ยนสถานะให้ก่อน)
-
-      const res = await fetch("/api/invoice", {
+      const response = await fetch("/api/invoice", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, status: "PAID" }),
       });
-      if (!res.ok) throw new Error("API error");
 
-      // อัปเดต UI ทันที (ไม่ต้องรอ Refresh)
+      const json = await response.json();
+      if (!response.ok) {
+        throw new Error(json.message || "Payment failed");
+      }
+
       setList((prev) => prev.filter((item) => item.id !== id));
       toast.success("ชำระเงินเรียบร้อยแล้ว");
-
-      // ถ้าอยากให้โหลดข้อมูลใหม่ทั้งหมด ให้เรียก fetchInvoices()
     } catch (error) {
-      toast.error("เกิดข้อผิดพลาดในการชำระเงิน");
+      toast.error(
+        error instanceof Error ? error.message : "เกิดข้อผิดพลาดในการชำระเงิน",
+      );
     }
   };
 
   return (
     <div className="space-y-4 p-6">
       <h1 className="font-sans text-2xl font-bold tracking-tight">
-        จัดการชำระเงิน / ออกใบเสร็จ
+        จัดการการชำระเงิน / ออกใบเสร็จ
       </h1>
 
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <Tabs
             value={tab}
-            onValueChange={(v) => {
-              setTab(v as InvoiceStatus);
-              setCurrentPage(1); // รีเซ็ตหน้ากลับไปหน้าแรกเสมอเมื่อเปลี่ยนแท็บ
+            onValueChange={(value) => {
+              setTab(value as PaymentTab);
+              setCurrentPage(1);
             }}
             className="w-full lg:w-auto"
           >
             <TabsList>
-              <TabsTrigger value="UNPAID">ยังไม่ชำระ</TabsTrigger>
-              <TabsTrigger value="PAID">ชำระแล้ว</TabsTrigger>
+              <TabsTrigger value="IN_PROGRESS">กำลังดำเนินการ</TabsTrigger>
+              <TabsTrigger value="PAYMENT">ชำระเงิน</TabsTrigger>
             </TabsList>
           </Tabs>
 
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleRefresh}
-              disabled={loading}
-            >
-              <RefreshCcw
-                className={cn("w-4 h-4", loading && "animate-spin")}
-              />
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleRefresh}
+            disabled={loading}
+          >
+            <RefreshCcw className={cn("h-4 w-4", loading && "animate-spin")} />
+          </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
           <div className="relative">
             <Search className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
             <Input
@@ -195,9 +200,9 @@ export default function PaymentPage() {
           <Popover>
             <PopoverTrigger asChild>
               <Button
-                variant={"outline"}
+                variant="outline"
                 className={cn(
-                  "w-full justify-start text-left font-normal h-10",
+                  "h-10 w-full justify-start text-left font-normal",
                   !selectedDate && "text-muted-foreground",
                 )}
               >
@@ -221,20 +226,16 @@ export default function PaymentPage() {
         </div>
       </div>
 
-      {/* ตารางข้อมูล (เหมือนของ Treatment) */}
       <div className="rounded-md border border-border bg-card">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead className="text-center min-w-30">
-                เลขที่ใบเสร็จ
-              </TableHead>
-              <TableHead className="text-center min-w-37.5">คนไข้</TableHead>
-              <TableHead className="text-center min-w-30">
-                ยอดชำระ (บาท)
-              </TableHead>
+              <TableHead className="min-w-30 text-center">เลขที่ใบเสร็จ</TableHead>
+              <TableHead className="min-w-37.5 text-center">คนไข้</TableHead>
+              <TableHead className="min-w-30 text-center">ยอดชำระ (บาท)</TableHead>
               <TableHead className="w-32 text-center">วันที่</TableHead>
               <TableHead className="w-28 text-center">เวลา</TableHead>
+              <TableHead className="w-32 text-center">สถานะ</TableHead>
               <TableHead className="w-40 text-center">จัดการ</TableHead>
             </TableRow>
           </TableHeader>
@@ -243,19 +244,22 @@ export default function PaymentPage() {
               Array.from({ length: 5 }).map((_, index) => (
                 <TableRow key={index}>
                   <TableCell>
-                    <Skeleton className="h-5 w-24 mx-auto bg-muted" />
+                    <Skeleton className="mx-auto h-5 w-24 bg-muted" />
                   </TableCell>
                   <TableCell>
-                    <Skeleton className="h-5 w-32 mx-auto bg-muted" />
+                    <Skeleton className="mx-auto h-5 w-32 bg-muted" />
                   </TableCell>
                   <TableCell>
-                    <Skeleton className="h-5 w-20 mx-auto bg-muted" />
+                    <Skeleton className="mx-auto h-5 w-20 bg-muted" />
                   </TableCell>
                   <TableCell>
-                    <Skeleton className="h-5 w-24 mx-auto bg-muted" />
+                    <Skeleton className="mx-auto h-5 w-24 bg-muted" />
                   </TableCell>
                   <TableCell>
-                    <Skeleton className="h-7 w-16 mx-auto rounded-full bg-muted" />
+                    <Skeleton className="mx-auto h-7 w-16 rounded-full bg-muted" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="mx-auto h-7 w-24 rounded-full bg-muted" />
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-center gap-2">
@@ -268,63 +272,75 @@ export default function PaymentPage() {
             ) : list.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
-                  className="text-center py-10 text-muted-foreground"
+                  colSpan={7}
+                  className="py-10 text-center text-muted-foreground"
                 >
                   ไม่พบข้อมูลใบเสร็จ
                 </TableCell>
               </TableRow>
             ) : (
-              list.map((r) => (
-                <TableRow key={r.id}>
+              list.map((invoice) => (
+                <TableRow key={invoice.id}>
                   <TableCell className="text-center font-medium text-muted-foreground">
-                    {r.receiptNumber}
+                    {invoice.receiptNumber}
                   </TableCell>
-                  <TableCell className="text-center">{r.patientName}</TableCell>
+                  <TableCell className="text-center">
+                    {invoice.patientName}
+                  </TableCell>
                   <TableCell className="text-center font-semibold text-emerald-600">
-                    ฿{r.total.toLocaleString()}
+                    ฿{invoice.total.toLocaleString()}
                   </TableCell>
-                  <TableCell className="text-center">{r.date}</TableCell>
+                  <TableCell className="text-center">{invoice.date}</TableCell>
                   <TableCell className="text-center">
                     <Badge
                       variant="secondary"
                       className="border-blue-950 bg-blue-50 text-blue-900"
                     >
-                      {r.time}
+                      {invoice.time}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge
+                      variant="secondary"
+                      className={
+                        invoice.canPay
+                          ? "border-emerald-900 bg-emerald-50 text-emerald-900"
+                          : "border-amber-900 bg-amber-50 text-amber-900"
+                      }
+                    >
+                      {invoice.canPay ? "พร้อมชำระ" : "กำลังดำเนินการ"}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-center">
                     <div className="flex justify-center gap-2">
-                      {/* 1. ปุ่มดูใบเสร็จ */}
                       <Dialog>
                         <DialogTrigger asChild>
                           <Button variant="outline" size="sm">
-                            <ReceiptText className="w-4 h-4 mr-1" />
-                            ใบเสร็จ
+                            <ReceiptText className="mr-1 h-4 w-4" />
+                            รายละเอียด
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh] bg-muted">
+                        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto bg-muted">
                           <DialogHeader className="sr-only">
                             <DialogTitle>
-                              ใบเสร็จรับเงิน - {r.patientName}
+                              รายละเอียดใบเสร็จ - {invoice.patientName}
                             </DialogTitle>
                           </DialogHeader>
                           <div className="p-2">
-                            {/* เรียกใช้ Component ใบเสร็จต้นฉบับของคุณตรงนี้! */}
-                            <ReceiptCard id={r.id} />
+                            <ReceiptCard id={invoice.id} />
                           </div>
                         </DialogContent>
                       </Dialog>
 
-                      {/* 2. ปุ่มยืนยันชำระเงิน (แสดงเฉพาะแท็บ UNPAID) */}
-                      {tab === "UNPAID" && (
+                      {tab === "PAYMENT" && (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button
                               size="sm"
                               className="bg-blue-600 hover:bg-blue-700"
+                              disabled={!invoice.canPay}
                             >
-                              <CheckCircle className="w-4 h-4 mr-1" />
+                              <CheckCircle className="mr-1 h-4 w-4" />
                               ชำระเงิน
                             </Button>
                           </AlertDialogTrigger>
@@ -334,16 +350,16 @@ export default function PaymentPage() {
                                 ยืนยันการรับชำระเงิน
                               </AlertDialogTitle>
                               <AlertDialogDescription>
-                                คุณได้รับเงินจำนวน{" "}
-                                <strong>฿{r.total.toLocaleString()}</strong>{" "}
-                                จากคุณ <strong>{r.patientName}</strong>{" "}
-                                ครบถ้วนแล้วใช่หรือไม่?
+                                รับชำระเงินจำนวน{" "}
+                                <strong>฿{invoice.total.toLocaleString()}</strong>{" "}
+                                จากคุณ <strong>{invoice.patientName}</strong>{" "}
+                                ใช่หรือไม่?
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
                               <AlertDialogAction
-                                onClick={() => handlePayment(r.id)}
+                                onClick={() => handlePayment(invoice.id)}
                               >
                                 ยืนยันชำระเงิน
                               </AlertDialogAction>
@@ -360,12 +376,12 @@ export default function PaymentPage() {
         </Table>
       </div>
 
-      {/* Pagination (ลอกต้นฉบับมาเป๊ะๆ) */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2 w-full">
-        <p className="text-xs text-muted-foreground font-medium">
+      <div className="flex w-full flex-col items-center justify-between gap-4 px-2 sm:flex-row">
+        <p className="text-xs font-medium text-muted-foreground">
           หน้า {currentPage} จาก {totalPages} (รวม {totalItems} รายการ)
         </p>
-        <div className="w-full sm:w-auto flex justify-center">
+
+        <div className="flex w-full justify-center sm:w-auto">
           <Pagination>
             <PaginationContent>
               <PaginationItem>
@@ -374,21 +390,23 @@ export default function PaymentPage() {
                     "cursor-pointer",
                     currentPage === 1 && "pointer-events-none opacity-40",
                   )}
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
                 />
               </PaginationItem>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                (num) => (
-                  <PaginationItem key={num} className="cursor-pointer">
+
+              {Array.from({ length: totalPages }, (_, index) => index + 1).map(
+                (page) => (
+                  <PaginationItem key={page} className="cursor-pointer">
                     <PaginationLink
-                      isActive={currentPage === num}
-                      onClick={() => setCurrentPage(num)}
+                      isActive={currentPage === page}
+                      onClick={() => setCurrentPage(page)}
                     >
-                      {num}
+                      {page}
                     </PaginationLink>
                   </PaginationItem>
                 ),
               )}
+
               <PaginationItem>
                 <PaginationNext
                   className={cn(
@@ -397,7 +415,7 @@ export default function PaymentPage() {
                       "pointer-events-none opacity-40",
                   )}
                   onClick={() =>
-                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                    setCurrentPage((page) => Math.min(totalPages, page + 1))
                   }
                 />
               </PaginationItem>

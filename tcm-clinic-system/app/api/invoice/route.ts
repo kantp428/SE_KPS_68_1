@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { Prisma, invoice_status_enum } from "@prisma/client";
+import { Prisma, invoice_status_enum, treatment_status_enum } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
@@ -7,12 +7,23 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const limit = Math.max(1, parseInt(searchParams.get("limit") || "10", 10));
-    const status = searchParams.get("status");
+    const status = (searchParams.get("status") ||
+      invoice_status_enum.UNPAID) as invoice_status_enum;
     const name = searchParams.get("name");
+    const mode = searchParams.get("mode");
+    const date = searchParams.get("date");
 
     const skip = (page - 1) * limit;
     const where: Prisma.invoiceWhereInput = {
-      ...(status ? { status: status as invoice_status_enum } : {}),
+      status,
+      ...(date && /^\d{4}-\d{2}-\d{2}$/.test(date)
+        ? {
+            created_at: {
+              gte: new Date(`${date}T00:00:00.000Z`),
+              lte: new Date(`${date}T23:59:59.999Z`),
+            },
+          }
+        : {}),
       ...(name
         ? {
             patient: {
@@ -25,14 +36,12 @@ export async function GET(req: Request) {
         : {}),
     };
 
-    const sortDirection = status === "UNPAID" ? "asc" : "desc";
-
     const [invoices, total] = await Promise.all([
       prisma.invoice.findMany({
         where,
-        skip,
-        take: limit,
-        orderBy: { created_at: sortDirection },
+        orderBy: {
+          created_at: status === invoice_status_enum.UNPAID ? "asc" : "desc",
+        },
         include: {
           patient: true,
           invoice_item: {
@@ -50,10 +59,23 @@ export async function GET(req: Request) {
       prisma.invoice.count({ where }),
     ]);
 
-    const data = invoices.map((invoice) => {
+    const mappedInvoices = invoices.map((invoice) => {
       const isoString = invoice.created_at.toISOString();
       const [datePart, timePart = "00:00"] = isoString.split("T");
       const [year, month, day] = datePart.split("-");
+      const treatmentStatuses = invoice.invoice_item
+        .map((item) => item.treatment?.treatment_status)
+        .filter(
+          (itemStatus): itemStatus is treatment_status_enum => Boolean(itemStatus),
+        );
+      const treatmentCount = treatmentStatuses.length;
+      const allTreatmentsCompleted =
+        treatmentCount > 0 &&
+        treatmentStatuses.every(
+          (itemStatus) => itemStatus === treatment_status_enum.COMPLETED,
+        );
+      const canPay =
+        invoice.status === invoice_status_enum.UNPAID && allTreatmentsCompleted;
 
       return {
         id: invoice.id.toString(),
@@ -70,6 +92,9 @@ export async function GET(req: Request) {
         status: invoice.status,
         date: `${day}/${month}/${year}`,
         time: timePart.substring(0, 5),
+        treatmentCount,
+        allTreatmentsCompleted,
+        canPay,
         items: invoice.invoice_item.map((item) => ({
           name:
             item.medicine?.name ||
@@ -77,17 +102,27 @@ export async function GET(req: Request) {
             "รายการทั่วไป",
           qty: item.quantity,
           price: Number(item.unit_price),
+          treatmentStatus: item.treatment?.treatment_status ?? null,
         })),
       };
     });
 
+    const filteredInvoices = mappedInvoices.filter((invoice) => {
+      if (mode === "in_progress") return !invoice.canPay;
+      if (mode === "payment") return invoice.canPay;
+      return true;
+    });
+
+    const paginatedInvoices = filteredInvoices.slice(skip, skip + limit);
+
     return NextResponse.json({
-      data,
+      data: paginatedInvoices,
       pagination: {
-        total,
+        total: filteredInvoices.length,
         page,
         limit,
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.max(1, Math.ceil(filteredInvoices.length / limit)),
+        rawTotal: total,
       },
     });
   } catch (error) {
@@ -113,8 +148,48 @@ export async function PATCH(req: Request) {
       );
     }
 
+    const invoiceId = Number(body.id);
+    const invoice = await prisma.invoice.findUnique({
+      where: { id: invoiceId },
+      include: {
+        invoice_item: {
+          include: {
+            treatment: true,
+          },
+        },
+      },
+    });
+
+    if (!invoice) {
+      return NextResponse.json(
+        { message: "Invoice not found" },
+        { status: 404 },
+      );
+    }
+
+    if (body.status === invoice_status_enum.PAID) {
+      const treatmentStatuses = invoice.invoice_item
+        .map((item) => item.treatment?.treatment_status)
+        .filter(
+          (itemStatus): itemStatus is treatment_status_enum => Boolean(itemStatus),
+        );
+
+      const allTreatmentsCompleted =
+        treatmentStatuses.length > 0 &&
+        treatmentStatuses.every(
+          (itemStatus) => itemStatus === treatment_status_enum.COMPLETED,
+        );
+
+      if (!allTreatmentsCompleted) {
+        return NextResponse.json(
+          { message: "All treatments must be completed before payment" },
+          { status: 400 },
+        );
+      }
+    }
+
     const updatedInvoice = await prisma.invoice.update({
-      where: { id: Number(body.id) },
+      where: { id: invoiceId },
       data: { status: body.status },
     });
 
