@@ -44,18 +44,18 @@ const COATING_TCM: Record<string, string> = {
 
 /**
  * ใช้ภายใน <FormProvider> ของ react-hook-form
- * field path: healthProfile.tongue.*
+ * field path: tongue.*
  */
 export function TongueInput() {
   const { control, watch } = useFormContext();
 
-  const selectedCoating = watch("healthProfile.tongue.coating");
+  const selectedCoating = watch("tongue.coating");
 
   return (
     <Card className="border-dashed">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-semibold text-muted-foreground">
-          การตรวจลิ้น (ไม่บังคับ)
+          การตรวจลิ้น
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -65,7 +65,7 @@ export function TongueInput() {
             <Label className="text-sm">สีลิ้น</Label>
             <Controller
               control={control}
-              name="healthProfile.tongue.color"
+              name="tongue.color"
               render={({ field }) => (
                 <Select
                   value={field.value || ""}
@@ -90,7 +90,7 @@ export function TongueInput() {
             <Label className="text-sm">ฝ้าลิ้น</Label>
             <Controller
               control={control}
-              name="healthProfile.tongue.coating"
+              name="tongue.coating"
               render={({ field }) => (
                 <Select
                   value={field.value || ""}
@@ -123,7 +123,7 @@ export function TongueInput() {
             <Label className="text-sm">ความชื้น</Label>
             <Controller
               control={control}
-              name="healthProfile.tongue.moisture"
+              name="tongue.moisture"
               render={({ field }) => (
                 <Select
                   value={field.value || ""}
@@ -148,7 +148,7 @@ export function TongueInput() {
             <Label className="text-sm">รูปร่างลิ้น</Label>
             <Controller
               control={control}
-              name="healthProfile.tongue.shape"
+              name="tongue.shape"
               render={({ field }) => (
                 <Select
                   value={field.value || ""}
@@ -174,7 +174,7 @@ export function TongueInput() {
         <div className="flex gap-6">
           <Controller
             control={control}
-            name="healthProfile.tongue.cracks"
+            name="tongue.cracks"
             render={({ field }) => (
               <div className="flex items-center gap-2">
                 <Checkbox
@@ -194,7 +194,7 @@ export function TongueInput() {
 
           <Controller
             control={control}
-            name="healthProfile.tongue.toothMarks"
+            name="tongue.toothMarks"
             render={({ field }) => (
               <div className="flex items-center gap-2">
                 <Checkbox

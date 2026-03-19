@@ -1,14 +1,14 @@
 "use client";
 
 import {
-  useFieldArray,
-  useFormContext,
   Controller,
   FieldErrorsImpl,
+  useFieldArray,
+  useFormContext,
 } from "react-hook-form";
 import { Plus, Trash2 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -18,7 +18,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// สมมติว่า type FormValues ถูกส่งต่อมาหรือนิยามใหม่ให้ตรงกัน
 type FormValues = {
   tongue?: {
     color?: string;
@@ -40,7 +39,6 @@ interface Props {
 }
 
 export const TreatmentItemForm = ({ serviceOptions, roomOptions }: Props) => {
-  // ระบุ Generic <FormValues> เพื่อให้รู้จักโครงสร้าง data และ errors
   const {
     control,
     formState: { errors },
@@ -51,46 +49,45 @@ export const TreatmentItemForm = ({ serviceOptions, roomOptions }: Props) => {
     name: "treatmentItems",
   });
 
-  // ใช้ FieldErrorsImpl ร่วมกับ Index เพื่อแก้ปัญหา 'any' type
   const itemErrors = errors.treatmentItems as unknown as FieldErrorsImpl<
     FormValues["treatmentItems"]
   >;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm font-semibold text-muted-foreground">
-          เพิ่มบริการ
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <div className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
+      <h2 className="text-sm font-semibold text-muted-foreground">
+        รายการรักษา
+      </h2>
+
+      <div className="space-y-3">
         {fields.map((fieldItem, index) => {
-          // ดึง error ของแถวปัจจุบันออกมาล่วงหน้า
           const errorRow = itemErrors?.[index];
 
           return (
             <div
               key={fieldItem.id}
-              className="grid grid-cols-[1fr_1fr_auto] items-end gap-3"
+              className="grid items-end gap-3 md:grid-cols-[2fr_2fr_auto]"
             >
-              {/* บริการ */}
-              <div className="space-y-1.5">
-                <Label>บริการ #{index + 1}</Label>
+              <div className="space-y-2">
+                <Label>บริการที่ {index + 1}</Label>
                 <Controller
                   control={control}
                   name={`treatmentItems.${index}.serviceId`}
                   render={({ field }) => (
                     <Select
                       value={field.value > 0 ? String(field.value) : ""}
-                      onValueChange={(v) => field.onChange(Number(v))}
+                      onValueChange={(value) => field.onChange(Number(value))}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="เลือกบริการ" />
                       </SelectTrigger>
                       <SelectContent>
-                        {serviceOptions.map((o) => (
-                          <SelectItem key={o.value} value={String(o.value)}>
-                            {o.label}
+                        {serviceOptions.map((option) => (
+                          <SelectItem
+                            key={option.value}
+                            value={String(option.value)}
+                          >
+                            {option.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -104,24 +101,26 @@ export const TreatmentItemForm = ({ serviceOptions, roomOptions }: Props) => {
                 )}
               </div>
 
-              {/* ห้อง */}
-              <div className="space-y-1.5">
-                <Label>ห้อง #{index + 1}</Label>
+              <div className="space-y-2">
+                <Label>ห้อง</Label>
                 <Controller
                   control={control}
                   name={`treatmentItems.${index}.roomId`}
                   render={({ field }) => (
                     <Select
                       value={field.value > 0 ? String(field.value) : ""}
-                      onValueChange={(v) => field.onChange(Number(v))}
+                      onValueChange={(value) => field.onChange(Number(value))}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="เลือกห้อง" />
                       </SelectTrigger>
                       <SelectContent>
-                        {roomOptions.map((o) => (
-                          <SelectItem key={o.value} value={String(o.value)}>
-                            {o.label}
+                        {roomOptions.map((option) => (
+                          <SelectItem
+                            key={option.value}
+                            value={String(option.value)}
+                          >
+                            {option.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -135,28 +134,25 @@ export const TreatmentItemForm = ({ serviceOptions, roomOptions }: Props) => {
                 )}
               </div>
 
-              {/* ปุ่มลบ */}
               <Button
                 type="button"
                 variant="outline"
-                size="icon"
                 onClick={() => remove(index)}
-                disabled={fields.length <= 1}
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-4 w-4 text-red-500" />
               </Button>
             </div>
           );
         })}
+      </div>
 
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => append({ serviceId: 0, roomId: 0 })}
-        >
-          <Plus className="mr-2 h-4 w-4" /> เพิ่มบริการ
-        </Button>
-      </CardContent>
-    </Card>
+      <Button
+        type="button"
+        variant="secondary"
+        onClick={() => append({ serviceId: 0, roomId: 0 })}
+      >
+        <Plus className="mr-2 h-4 w-4" /> เพิ่มรายการรักษา
+      </Button>
+    </div>
   );
 };

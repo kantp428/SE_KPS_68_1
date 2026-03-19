@@ -72,7 +72,15 @@ const schema = z.object({
         roomId: z.number().int().positive("กรุณาเลือกห้อง"),
       }),
     )
-    .min(1, "กรุณาเพิ่มบริการอย่างน้อย 1 รายการ"),
+    .optional(),
+  medicineItems: z
+    .array(
+      z.object({
+        medId: z.number().int().positive("à¸à¸£à¸¸à¸“à¸²à¹€à¸¥à¸·à¸­à¸à¸¢à¸²"),
+        quantity: z.number().int().positive("à¸à¸£à¸¸à¸“à¸²à¸£à¸°à¸šà¸¸à¸ˆà¸³à¸™à¸§à¸™"),
+      }),
+    )
+    .optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -183,7 +191,8 @@ const DoctorPatientPage = () => {
         cracks: false,
         toothMarks: false,
       },
-      treatmentItems: [{ serviceId: 0, roomId: 0 }],
+      treatmentItems: [],
+      medicineItems: [],
     },
   });
   const {
@@ -216,6 +225,7 @@ const DoctorPatientPage = () => {
   }, [profile]);
 
   const onSubmit = async (values: FormValues) => {
+    console.log(values);
     if (!healthProfileId || !invoiceId || !patientId) {
       toast.error("ข้อมูลไม่ครบ ไม่สามารถบันทึกได้");
       return;
@@ -234,7 +244,7 @@ const DoctorPatientPage = () => {
         healthProfileId,
         invoiceId,
         startAt: `${format(new Date(), "yyyy-MM-dd")}T${format(new Date(), "HH:mm")}:00`,
-        treatmentItems: values.treatmentItems,
+        treatmentItems: values.treatmentItems ?? [],
       });
       toast.success("บันทึกข้อมูลสำเร็จ");
       router.push("/doctor/treatment");
@@ -395,8 +405,7 @@ const DoctorPatientPage = () => {
                 serviceOptions={serviceOptions}
                 roomOptions={roomOptions}
               />
-              <Addmedicine/>
-
+              <Addmedicine />
 
               <div className="flex gap-3">
                 <Button
