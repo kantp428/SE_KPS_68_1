@@ -67,6 +67,7 @@ export async function GET(_req: Request, context: RouteContext) {
             "รายการทั่วไป",
           qty: item.quantity,
           price: Number(item.unit_price),
+          treatmentStatus: item.treatment?.treatment_status ?? null,
         })),
       },
     });

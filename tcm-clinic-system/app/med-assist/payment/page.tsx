@@ -1,5 +1,6 @@
 "use client";
 
+import InProgressInvoiceDetail from "@/components/payment/InProgressInvoiceDetail";
 import ReceiptCard from "@/components/receipt/ReceiptCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -155,8 +156,8 @@ export default function PaymentPage() {
   };
 
   return (
-    <div className="space-y-4 p-6">
-      <h1 className="font-sans text-2xl font-bold tracking-tight">
+    <div className="space-y-4 p-6 font-sans">
+      <h1 className="text-2xl font-bold tracking-tight">
         จัดการการชำระเงิน / ออกใบเสร็จ
       </h1>
 
@@ -320,14 +321,18 @@ export default function PaymentPage() {
                             รายละเอียด
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto bg-muted">
+                        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto bg-muted">
                           <DialogHeader className="sr-only">
                             <DialogTitle>
                               รายละเอียดใบเสร็จ - {invoice.patientName}
                             </DialogTitle>
                           </DialogHeader>
                           <div className="p-2">
-                            <ReceiptCard id={invoice.id} />
+                            {tab === "IN_PROGRESS" ? (
+                              <InProgressInvoiceDetail id={invoice.id} />
+                            ) : (
+                              <ReceiptCard id={invoice.id} />
+                            )}
                           </div>
                         </DialogContent>
                       </Dialog>
