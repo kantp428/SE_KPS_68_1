@@ -10,7 +10,9 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import {
+  CalendarDays,
   ChevronsUpDown,
+  ClipboardPlus,
   DoorOpen,
   HeartPulse,
   Home,
@@ -27,15 +29,16 @@ const userSign = {
 
 const user = {
   name: "Dr. Somchai",
-  role: "Clinic Docter",
+  role: "Clinic Doctor",
 };
 
 const items = [
-  { title: "หน้าหลัก", url: "/docter", icon: Home },
-  { title: "ข้อมูลห้อง", url: "/docter/room", icon: DoorOpen },
+  { title: "หน้าหลัก", url: "/doctor", icon: Home },
+  { title: "การบำบัด", url: "/doctor/treatment", icon: ClipboardPlus },
+  { title: "ตารางงาน", url: "/doctor/schedule", icon: CalendarDays },
 ];
 
-export function DocterAppSidebar() {
+export function DoctorAppSidebar() {
   const pathname = usePathname();
   return (
     <Sidebar collapsible="icon">
@@ -53,9 +56,7 @@ export function DocterAppSidebar() {
 
               <div className="grid flex-1 text-left text-sm leading-tight group-data-[state=collapsed]:hidden">
                 <span className="truncate font-semibold">{user.name}</span>
-                <span className="truncate text-xs text-white/70">
-                  {user.role}
-                </span>
+                <span className="truncate text-xs">{user.role}</span>
               </div>
               <ChevronsUpDown className="ml-auto size-4 group-data-[state=collapsed]:hidden opacity-50" />
             </SidebarMenuButton>
@@ -69,8 +70,8 @@ export function DocterAppSidebar() {
             <SidebarMenu>
               {items.map((item) => {
                 const isActive =
-                  item.url === "/docter"
-                    ? pathname === "/docter"
+                  item.url === "/doctor"
+                    ? pathname === "/doctor"
                     : pathname.startsWith(item.url);
                 return (
                   <SidebarMenuItem key={item.title}>

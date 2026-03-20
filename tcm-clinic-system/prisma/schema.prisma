@@ -60,11 +60,11 @@ model invoice_item {
 }
 
 model medicine {
-  id           Int                   @id @default(autoincrement())
-  name         String                @db.VarChar(100)
+  id           Int                  @id @default(autoincrement())
+  name         String               @db.VarChar(100)
   description  String
-  price        Decimal               @db.Decimal(10, 2)
-  status       medicine_status_enum? @default(AVAILABLE)
+  price        Decimal              @db.Decimal(10, 2)
+  status       medicine_status_enum @default(AVAILABLE)
   invoice_item invoice_item[]
 }
 
@@ -93,12 +93,13 @@ model room {
   treatment treatment[]
 }
 
+// 2. แก้ไข model service เดิม (บรรทัด 96-102) ให้เพิ่มฟิลด์ status เข้าไป
 model service {
-  id              Int                  @id @default(autoincrement())
-  name            String               @db.VarChar(100)
-  price           Decimal              @db.Decimal(10, 2)
+  id              Int                 @id @default(autoincrement())
+  name            String              @db.VarChar(100)
+  price           Decimal             @db.Decimal(10, 2)
   duration_minute Int
-  status          service_status_enum?
+  status          service_status_enum @default(AVAILABLE)
   treatment       treatment[]
 }
 
@@ -178,6 +179,11 @@ enum room_status_enum {
   UNAVAILABLE
 }
 
+enum medicine_status_enum {
+  AVAILABLE
+  UNAVAILABLE
+}
+
 enum staff_role_enum {
   DOCTOR
   MED_ASSISTANT
@@ -186,12 +192,6 @@ enum staff_role_enum {
 enum treatment_status_enum {
   IN_PROGRESS
   COMPLETED
-  FOLLOW_UP
-}
-
-enum medicine_status_enum {
-  AVAILABLE
-  UNAVAILABLE
 }
 
 enum service_status_enum {

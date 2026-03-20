@@ -21,14 +21,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useDebounce } from "@/hooks/use-debounce";
-import { useRoom } from "@/hooks/useRoom";
+import { useService } from "@/hooks/use-service";
 import { cn } from "@/lib/utils";
 import { Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
-const RoomPage = () => {
+const ServicePage = () => {
   const router = useRouter();
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -40,7 +40,7 @@ const RoomPage = () => {
   const [nameSearch, setNameSearch] = useState("");
   const debouncedNameSearch = useDebounce(nameSearch, 500);
 
-  const { list, loading, fetchList, deleteRoom } = useRoom(
+  const { list, loading, fetchList, deleteService } = useService(
     currentPage,
     limit,
     debouncedNameSearch,
@@ -49,23 +49,19 @@ const RoomPage = () => {
   const totalPages = list?.pagination?.totalPages || 1;
 
   function statusThaiFormat(status: string) {
-    if (status === "AVAILABLE") {
-      return "เปิดใช้งาน";
-    } else {
-      return "ปิดใช้งาน";
-    }
+    return status === "AVAILABLE" ? "เปิดใช้งาน" : "ปิดใช้งาน";
   }
 
   const handleDelete = async (id: number) => {
     try {
-      await deleteRoom(id);
-      toast.success("ลบข้อมูลสำเร็จ", {
-        description: "ข้อมูลห้องถูกลบเรียบร้อยแล้ว",
+      await deleteService(id);
+      toast.success("ปิดการใช้งานสำเร็จ", {
+        description: "ปิดการใช้งานบริการเรียบร้อยแล้ว",
       });
       fetchList();
     } catch (e: unknown) {
       const errorMessage = handleException(e, "เกิดข้อผิดพลาด");
-      toast.error("ลบข้อมูลไม่สำเร็จ", {
+      toast.error("ปิดการใช้งานไม่สำเร็จ", {
         description: errorMessage,
       });
     }
@@ -74,23 +70,21 @@ const RoomPage = () => {
   return (
     <div className="space-y-4 p-6">
       <h1 className="font-sans text-2xl font-bold tracking-tight">
-        ข้อมูลห้อง
+        ข้อมูลบริการ
       </h1>
 
-      {/* --- Filters Section --- */}
       <div className="flex items-center justify-between gap-4">
         <div className="relative flex-1 max-w-sm">
           <Input
-            placeholder="ค้นหาชื่อห้อง..."
+            placeholder="ค้นหาชื่อบริการ..."
             value={nameSearch}
             onChange={(e) => setNameSearch(e.target.value)}
             className="h-10 focus-visible:ring-1 transition-all"
           />
         </div>
 
-        {/* เพิ่มปุ่มนี้เข้าไป */}
-        <Button onClick={() => router.push("/staff/room/new")}>
-          + เพิ่มห้องใหม่
+        <Button onClick={() => router.push("/staff/service/new")}>
+          + เพิ่มบริการใหม่
         </Button>
       </div>
 
@@ -98,7 +92,13 @@ const RoomPage = () => {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead className="min-w-30">ชื่อห้อง</TableHead>
+              <TableHead className="min-w-30">ชื่อบริการ</TableHead>
+              <TableHead className="hidden sm:table-cell text-center">
+                ราคา (บาท)
+              </TableHead>
+              <TableHead className="hidden sm:table-cell text-center">
+                ระยะเวลา (นาที)
+              </TableHead>
               <TableHead className="hidden sm:table-cell w-50 text-center">
                 สถานะ
               </TableHead>
@@ -107,18 +107,22 @@ const RoomPage = () => {
           </TableHeader>
           <TableBody>
             {loading ? (
-              // แสดง Skeleton จำนวน 5 แถวระหว่างรอข้อมูล
               Array.from({ length: 5 }).map((_, index) => (
                 <TableRow key={index}>
-                  {/* ชื่อห้อง */}
                   <TableCell>
                     <Skeleton className="h-5 w-37.5 bg-muted" />
                   </TableCell>
-                  {/* สถานะห้อง (จัดกลาง) */}
-                  <TableCell className="flex justify-center">
-                    <Skeleton className="h-7 w-25 rounded-full bg-muted" />
+                  <TableCell className="hidden sm:table-cell">
+                    <Skeleton className="h-5 w-20 bg-muted mx-auto" />
                   </TableCell>
-                  {/* ปุ่มจัดการ (จัดกลาง) */}
+                  <TableCell className="hidden sm:table-cell">
+                    <Skeleton className="h-5 w-20 bg-muted mx-auto" />
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell">
+                    <div className="flex justify-center">
+                      <Skeleton className="h-7 w-25 rounded-full bg-muted" />
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <div className="flex justify-center gap-2">
                       <Skeleton className="h-8 w-8 rounded-md bg-muted" />
@@ -130,17 +134,25 @@ const RoomPage = () => {
             ) : list?.data.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={3}
+                  colSpan={5}
                   className="text-center py-10 text-muted-foreground"
                 >
-                  ไม่พบข้อมูลห้อง
+                  ไม่พบข้อมูลบริการ
                 </TableCell>
               </TableRow>
             ) : (
               list?.data.map((l) => (
                 <TableRow key={l.id}>
                   <TableCell>{l.name}</TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className="hidden sm:table-cell text-center">
+                    {parseFloat(l.price).toLocaleString("th-TH", {
+                      minimumFractionDigits: 2,
+                    })}
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell text-center">
+                    {l.duration_minute}
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell text-center">
                     <div
                       className={cn(
                         "inline-flex px-3 py-1 rounded-full text-xs border",
@@ -153,16 +165,13 @@ const RoomPage = () => {
                     </div>
                   </TableCell>
                   <TableCell className="text-center">
-                    {/* ปุ่มแก้ไข */}
                     <Button
                       size="icon"
                       variant="ghost"
-                      onClick={() => router.push(`/staff/room/${l.id}`)}
+                      onClick={() => router.push(`/staff/service/${l.id}`)}
                     >
                       <Pencil className="w-4 h-4" />
                     </Button>
-
-                    {/* ปุ่มลบ - เปลี่ยนมาเรียก setDeleteTarget */}
                     <Button
                       size="icon"
                       variant="ghost"
@@ -191,7 +200,6 @@ const RoomPage = () => {
         <div className="w-full sm:w-auto flex justify-center">
           <Pagination>
             <PaginationContent>
-              {/* prev button */}
               <PaginationItem>
                 <PaginationPrevious
                   className={cn(
@@ -202,7 +210,6 @@ const RoomPage = () => {
                 />
               </PaginationItem>
 
-              {/* page number */}
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(
                 (num) => (
                   <PaginationItem key={num} className="cursor-pointer">
@@ -216,7 +223,6 @@ const RoomPage = () => {
                 ),
               )}
 
-              {/* next button */}
               <PaginationItem>
                 <PaginationNext
                   className={cn(
@@ -237,9 +243,9 @@ const RoomPage = () => {
             onOpenChange={(open) => {
               if (!open) setDeleteTargetId(null);
             }}
-            title="ยืนยันการลบข้อมูล?"
-            description={`คุณต้องการลบห้อง "${tempName ?? ""}" ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้`}
-            confirmText="ลบข้อมูล"
+            title="ยืนยันการปิดการใช้งาน?"
+            description={`คุณต้องการปิดการใช้งานบริการ "${tempName ?? ""}" ใช่หรือไม่?`}
+            confirmText="ปิดการใช้งาน"
             isDestructive={true}
             onConfirm={() => {
               if (deleteTargetId) {
@@ -254,4 +260,4 @@ const RoomPage = () => {
   );
 };
 
-export default RoomPage;
+export default ServicePage;

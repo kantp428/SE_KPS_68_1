@@ -19,7 +19,7 @@ const api = axios.create({
   },
 });
 
-export type ValidStatus = "IN_PROGRESS" | "COMPLETED" | "FOLLOW_UP";
+export type ValidStatus = "IN_PROGRESS" | "COMPLETED";
 
 /* ===============================
    API functions (pure)
@@ -30,6 +30,7 @@ export const getTreatmentList = (
   status?: ValidStatus,
   search?: string,
   listEndpoint = "/treatment",
+  isObserve?: boolean,
   serviceIds?: number[],
   date?: string,
 ) =>
@@ -37,6 +38,7 @@ export const getTreatmentList = (
     params: {
       page,
       limit,
+      isObserve: isObserve,
       ...(status ? { status: status } : {}),
       ...(search ? { name: search } : {}),
       ...(serviceIds && serviceIds.length > 0
@@ -64,6 +66,7 @@ export function useTreatment(
   status?: ValidStatus,
   search?: string,
   listEndpoint = "/treatment",
+  isObserve: boolean = false,
   serviceIds?: number[],
   date?: string,
 ) {
@@ -80,6 +83,7 @@ export function useTreatment(
         status,
         search,
         listEndpoint,
+        isObserve,
         serviceIds,
         date,
       );
@@ -89,7 +93,7 @@ export function useTreatment(
     } finally {
       setLoading(false);
     }
-  }, [page, limit, status, search, listEndpoint, serviceIds, date]);
+  }, [page, limit, status, search, listEndpoint, isObserve, serviceIds, date]);
 
   const fetchOne = async (id: number) => {
     try {
