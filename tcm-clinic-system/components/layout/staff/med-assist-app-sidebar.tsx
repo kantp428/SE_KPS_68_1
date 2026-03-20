@@ -30,6 +30,7 @@ import {
   Pill,
   ReceiptText,
   UserCircle2Icon,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -57,14 +58,10 @@ type MenuItem = {
 
 const items = [
   { title: "หน้าหลัก", url: "/med-assist", icon: Home },
-  {
-    title: "การบำบัด",
-    url: "/med-assist/treatment",
-    icon: Cross,
-    children: [
+  { title: "การบำบัด", url: "/med-assist/treatment", icon: Cross, children: [
       { title: "รายการการบำบัด", url: "/med-assist/treatment" },
       { title: "เพิ่มการบำบัด", url: "/med-assist/treatment/new" },
-    ],
+    ]
   },
   { title: "การชำระเงิน", url: "/med-assist/payment", icon: ReceiptText },
   { title: "ตารางงาน", url: "/med-assist/schedule", icon: CalendarDays },
