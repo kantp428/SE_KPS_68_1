@@ -60,11 +60,11 @@ model invoice_item {
 }
 
 model medicine {
-  id           Int                   @id @default(autoincrement())
-  name         String                @db.VarChar(100)
+  id           Int                  @id @default(autoincrement())
+  name         String               @db.VarChar(100)
   description  String
-  price        Decimal               @db.Decimal(10, 2)
-  status       medicine_status_enum? @default(AVAILABLE)
+  price        Decimal              @db.Decimal(10, 2)
+  status       medicine_status_enum @default(AVAILABLE)
   invoice_item invoice_item[]
 }
 
@@ -72,7 +72,7 @@ model patient {
   id              Int              @id @default(autoincrement())
   first_name      String           @db.VarChar(50)
   last_name       String           @db.VarChar(50)
-  thai_id         String           @unique @db.VarChar(13)
+  thai_id         String           @unique @db.VarChar(255)
   birthdate       DateTime         @db.Date
   gender          gender_enum
   phone_number    String           @db.VarChar(20)
@@ -94,11 +94,11 @@ model room {
 }
 
 model service {
-  id              Int                  @id @default(autoincrement())
-  name            String               @db.VarChar(100)
-  price           Decimal              @db.Decimal(10, 2)
+  id              Int                 @id @default(autoincrement())
+  name            String              @db.VarChar(100)
+  price           Decimal             @db.Decimal(10, 2)
   duration_minute Int
-  status          service_status_enum?
+  status          service_status_enum @default(AVAILABLE)
   treatment       treatment[]
 }
 
@@ -186,7 +186,6 @@ enum staff_role_enum {
 enum treatment_status_enum {
   IN_PROGRESS
   COMPLETED
-  FOLLOW_UP
 }
 
 enum medicine_status_enum {

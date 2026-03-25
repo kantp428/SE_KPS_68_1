@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma";
 import { createSession } from "@/lib/session";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
+import { encryptData, decryptData } from "@/lib/encryption";
 
 export async function POST(req: Request) {
   const { username, email, password, isAdminLogin } = await req.json();
@@ -13,9 +14,12 @@ export async function POST(req: Request) {
     );
   }
 
+  const isThaiId = (str: string) => /^\d{13}$/.test(str);
+  const queryUsername = username ? (isThaiId(username) ? encryptData(username) : username) : undefined;
+
   const account = await prisma.account.findFirst({
     where: {
-      OR: [{ email: email || undefined }, { username: username || undefined }],
+      OR: [{ email: email || undefined }, { username: queryUsername }],
     },
     include: {
       patient: true,
@@ -54,15 +58,17 @@ export async function POST(req: Request) {
     fullName = `${account.staff.first_name} ${account.staff.last_name}`;
   }
 
+  const decryptedUsername = decryptData(account.username);
+
   await createSession({
     id: account.id,
-    username: account.username,
+    username: decryptedUsername,
     role: account.account_role,
   });
 
   return NextResponse.json({
     id: account.id,
-    username: account.username,
+    username: decryptedUsername,
     role: account.account_role,
     staffRole: account.staff?.staff_role, // ส่ง Role ของ Staff กลับไปด้วย
     fullName: fullName,
