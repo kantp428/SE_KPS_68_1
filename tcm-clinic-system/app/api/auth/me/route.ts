@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { NextResponse } from "next/server";
+import { decryptData } from "@/lib/encryption";
 
 export async function GET() {
     const session = await getSession();
@@ -33,7 +34,7 @@ export async function GET() {
 
         return NextResponse.json({
             id: account.id,
-            username: account.username,
+            username: decryptData(account.username),
             email: account.email,
             role: account.account_role,
             fullName: fullName,

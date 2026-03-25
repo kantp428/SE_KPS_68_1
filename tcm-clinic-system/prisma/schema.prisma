@@ -72,7 +72,7 @@ model patient {
   id              Int              @id @default(autoincrement())
   first_name      String           @db.VarChar(50)
   last_name       String           @db.VarChar(50)
-  thai_id         String           @unique @db.VarChar(13)
+  thai_id         String           @unique @db.VarChar(255)
   birthdate       DateTime         @db.Date
   gender          gender_enum
   phone_number    String           @db.VarChar(20)
@@ -192,6 +192,12 @@ enum staff_role_enum {
 enum treatment_status_enum {
   IN_PROGRESS
   COMPLETED
+
+}
+
+enum medicine_status_enum {
+  AVAILABLE
+  UNAVAILABLE
 }
 
 enum service_status_enum {

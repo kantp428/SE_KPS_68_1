@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
+import { encryptData } from "@/lib/encryption";
 
 export async function POST(req: Request) {
     try {
@@ -27,21 +28,22 @@ export async function POST(req: Request) {
         }
 
         // 2. Check if username (thaiId) or email already exists
+        const encryptedThaiId = encryptData(thaiId);
         const existingAccount = await prisma.account.findFirst({
             where: {
-                OR: [{ username: thaiId }, { email }],
+                OR: [{ username: encryptedThaiId }, { email }],
             },
         });
 
         if (existingAccount) {
-            if (existingAccount.username === thaiId) {
+            if (existingAccount.username === encryptedThaiId) {
                 return NextResponse.json({ message: "ชื่อผู้ใช้งานนี้ถูกใช้ไปแล้ว" }, { status: 400 });
             }
             return NextResponse.json({ message: "อีเมลนี้ถูกใช้ไปแล้ว" }, { status: 400 });
         }
 
         const existingPatient = await prisma.patient.findUnique({
-            where: { thai_id: thaiId },
+            where: { thai_id: encryptedThaiId },
         });
 
         if (existingPatient && existingPatient.account_id) {
@@ -56,7 +58,7 @@ export async function POST(req: Request) {
             // Create account
             const newAccount = await tx.account.create({
                 data: {
-                    username: thaiId,
+                    username: encryptedThaiId,
                     email,
                     password_hash: hashedPassword,
                     account_role: "PATIENT",
@@ -77,7 +79,7 @@ export async function POST(req: Request) {
                     data: {
                         first_name: firstName,
                         last_name: lastName,
-                        thai_id: thaiId,
+                        thai_id: encryptedThaiId,
                         birthdate: new Date(birthdate),
                         gender: gender as "MALE" | "FEMALE",
                         phone_number: phoneNumber,
