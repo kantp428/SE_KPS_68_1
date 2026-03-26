@@ -15,11 +15,28 @@ export async function POST(req: Request) {
   }
 
   const isThaiId = (str: string) => /^\d{13}$/.test(str);
-  const queryUsername = username ? (isThaiId(username) ? encryptData(username) : username) : undefined;
+
+  const orConditions: { email?: string; username?: string }[] = [];
+  if (email) {
+    orConditions.push({ email: email });
+  }
+  if (username) {
+    orConditions.push({ username: username });
+    if (isThaiId(username)) {
+      orConditions.push({ username: encryptData(username) });
+    }
+  }
+
+  if (orConditions.length === 0) {
+    return NextResponse.json(
+      { message: "Email or username required" },
+      { status: 400 },
+    );
+  }
 
   const account = await prisma.account.findFirst({
     where: {
-      OR: [{ email: email || undefined }, { username: queryUsername }],
+      OR: orConditions,
     },
     include: {
       patient: true,

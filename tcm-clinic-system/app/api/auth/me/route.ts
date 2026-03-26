@@ -37,7 +37,13 @@ export async function GET() {
             username: decryptData(account.username),
             email: account.email,
             role: account.account_role,
+            staffRole: account.staff?.staff_role,
             fullName: fullName,
+            patient: account.patient ? {
+                ...account.patient,
+                thai_id: decryptData(account.patient.thai_id)
+            } : undefined,
+            staff: account.staff || undefined,
         });
 
     } catch (error) {

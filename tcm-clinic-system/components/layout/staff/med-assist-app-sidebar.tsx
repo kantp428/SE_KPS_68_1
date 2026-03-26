@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 
 const userSign = {
   title: "TCM CLINIC",
@@ -41,10 +42,7 @@ const userSign = {
   label: "Application",
 };
 
-const user = {
-  name: "Dr. Somchai",
-  role: "Clinic MedAssist",
-};
+// Mock user removed
 
 type MenuItem = {
   title: string;
@@ -58,7 +56,8 @@ type MenuItem = {
 
 const items = [
   { title: "หน้าหลัก", url: "/med-assist", icon: Home },
-  { title: "การบำบัด", url: "/med-assist/treatment", icon: Cross, children: [
+  {
+    title: "การบำบัด", url: "/med-assist/treatment", icon: Cross, children: [
       { title: "รายการการบำบัด", url: "/med-assist/treatment" },
       { title: "เพิ่มการบำบัด", url: "/med-assist/treatment/new" },
     ]
@@ -81,6 +80,7 @@ function isActiveChild(pathname: string, url: string) {
 
 export function MedAssistAppSidebar() {
   const pathname = usePathname();
+  const { user, isLoading } = useAuth() || {};
   const [isTreatmentOpen, setIsTreatmentOpen] = useState(
     pathname.startsWith("/med-assist/treatment"),
   );
@@ -105,9 +105,11 @@ export function MedAssistAppSidebar() {
               </div>
 
               <div className="grid flex-1 text-left text-sm leading-tight group-data-[state=collapsed]:hidden">
-                <span className="truncate font-semibold">{user.name}</span>
+                <span className="truncate font-semibold">
+                  {isLoading ? "กำลังโหลด..." : (user?.fullName || user?.username || "Guest")}
+                </span>
                 <span className="truncate text-xs text-white/70">
-                  {user.role}
+                  {user?.staffRole || user?.role || "ผู้ใช้งาน"}
                 </span>
               </div>
               <ChevronsUpDown className="ml-auto size-4 opacity-50 group-data-[state=collapsed]:hidden" />

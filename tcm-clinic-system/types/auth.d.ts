@@ -1,9 +1,14 @@
+import type { patient, staff } from "@prisma/client";
+
 export interface AuthUser {
     id: number;
     username: string;
     email: string;
     role: string;
+    staffRole?: string;
     fullName: string;
+    patient?: patient;
+    staff?: staff;
 }
 
 export interface LoginFormValues {

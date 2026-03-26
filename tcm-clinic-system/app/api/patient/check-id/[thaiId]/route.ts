@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { encryptData } from "@/lib/encryption";
 
 export async function GET(
     req: Request,
@@ -15,8 +16,15 @@ export async function GET(
             );
         }
 
-        const patient = await prisma.patient.findUnique({
-            where: { thai_id: thaiId },
+        const encryptedThaiId = encryptData(thaiId);
+
+        const patient = await prisma.patient.findFirst({
+            where: {
+                OR: [
+                    { thai_id: thaiId },
+                    { thai_id: encryptedThaiId },
+                ],
+            },
         });
 
         if (!patient) {

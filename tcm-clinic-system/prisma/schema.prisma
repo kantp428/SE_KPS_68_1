@@ -93,7 +93,6 @@ model room {
   treatment treatment[]
 }
 
-// 2. แก้ไข model service เดิม (บรรทัด 96-102) ให้เพิ่มฟิลด์ status เข้าไป
 model service {
   id              Int                 @id @default(autoincrement())
   name            String              @db.VarChar(100)
@@ -192,12 +191,6 @@ enum staff_role_enum {
 enum treatment_status_enum {
   IN_PROGRESS
   COMPLETED
-
-}
-
-enum medicine_status_enum {
-  AVAILABLE
-  UNAVAILABLE
 }
 
 enum service_status_enum {
