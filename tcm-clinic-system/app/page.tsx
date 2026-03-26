@@ -81,10 +81,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Footer */}
+      {/* Footer
       <footer className="bg-sky-900 text-sky-100 py-8 text-center text-sm">
         <p>© 2026 TCM Clinic System. All rights reserved.</p>
-      </footer>
+      </footer> */}
     </div>
   );
 }
