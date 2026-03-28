@@ -2,6 +2,42 @@ import prisma from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { NextResponse } from "next/server";
 
+
+export async function GET() {
+    const session = await getSession();
+
+    if (!session || !session.sub) {
+        return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    try {
+        const accountId = Number(session.sub);
+
+        const account = await prisma.account.findUnique({
+            where: { id: accountId },
+            include: { patient: true }
+        });
+
+        if (!account || !account.patient) {
+            return NextResponse.json({ message: "Patient profile not found" }, { status: 403 });
+        }
+
+        const appointments = await prisma.appointment.findMany({
+            where: {
+                patient_id: account.patient.id
+            },
+            orderBy: {
+                datetime: 'desc'
+            }
+        });
+
+        return NextResponse.json(appointments);
+    } catch (error) {
+        console.error("Error fetching patient appointments:", error);
+        return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+    }
+}
+
 export async function POST(request: Request) {
     const session = await getSession();
 

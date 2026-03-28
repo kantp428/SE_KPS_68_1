@@ -9,6 +9,17 @@ import { CalendarIcon, Clock, Loader2, AlertCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function AppointmentPage() {
     const router = useRouter();
@@ -54,7 +65,7 @@ export default function AppointmentPage() {
                 time: selectedTime,
             });
             toast.success("จองคิวสำเร็จ!");
-            router.push("/patient"); // พาไปหน้าหลัก หรือหน้าประวัติการจอง
+            router.push("/patient/appointment/list"); // พาไปหน้ารายการการจอง
             router.refresh();
         } catch (err) {
             // ถ้าระบบโยน error ออกมา ให้หยุดการทำงานและให้ซับมิทใหม่ได้
@@ -165,21 +176,54 @@ export default function AppointmentPage() {
                                             วันที่ {new Date(selectedDate).toLocaleDateString('th-TH')} เวลา {selectedTime} - {parseInt(selectedTime.split(':')[0]) + 1}:00 น.
                                         </p>
                                     </div>
-                                    <Button
-                                        size="lg"
-                                        onClick={handleBooking}
-                                        disabled={isSubmitting}
-                                        className="w-full sm:w-auto shadow-md"
-                                    >
-                                        {isSubmitting ? (
-                                            <>
-                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                กำลังดำเนินการ...
-                                            </>
-                                        ) : (
-                                            "ยืนยันการจองคิว"
-                                        )}
-                                    </Button>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button
+                                                size="lg"
+                                                disabled={isSubmitting}
+                                                className="w-full sm:w-auto shadow-md"
+                                            >
+                                                {isSubmitting ? (
+                                                    <>
+                                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                        กำลังดำเนินการ...
+                                                    </>
+                                                ) : (
+                                                    "ยืนยันการจองคิว"
+                                                )}
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent className="rounded-2xl">
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle className="flex items-center gap-2 text-primary">
+                                                    <CalendarIcon className="w-5 h-5" /> ยืนยันการจองคิว
+                                                </AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    คุณต้องการนัดหมายเข้าการรักษาแพทย์แผนจีน ตามวันและเวลาที่เลือกใช่หรือไม่?
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <div className="bg-muted p-4 rounded-xl space-y-2 text-sm mt-2">
+                                                <div className="flex justify-between">
+                                                    <span className="text-muted-foreground">วันที่:</span>
+                                                    <span className="font-semibold">{new Date(selectedDate).toLocaleDateString('th-TH')}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-muted-foreground">เวลา:</span>
+                                                    <span className="font-semibold">{selectedTime} - {parseInt(selectedTime.split(':')[0]) + 1}:00 น.</span>
+                                                </div>
+                                            </div>
+                                            <AlertDialogFooter className="mt-4">
+                                                <AlertDialogCancel className="rounded-xl">ตรวจสอบอีกครั้ง</AlertDialogCancel>
+                                                <AlertDialogAction
+                                                    className="bg-primary hover:bg-primary/90 rounded-xl"
+                                                    onClick={handleBooking}
+                                                    disabled={isSubmitting}
+                                                >
+                                                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "ยืนยันจองคิว"}
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
                                 </div>
                             </div>
                         )}

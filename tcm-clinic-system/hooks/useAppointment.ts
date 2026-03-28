@@ -49,10 +49,26 @@ export function useAppointment() {
         }
     };
 
+    const fetchPatientAppointments = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const res = await api.get("/patient/appointment");
+            return res.data;
+        } catch (err: unknown) {
+            const errorMsg = handleException(err, "Failed to fetch appointments");
+            setError(errorMsg);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
     return {
         loading,
         error,
         fetchSlots,
         bookAppointment,
+        fetchPatientAppointments,
     };
 }
