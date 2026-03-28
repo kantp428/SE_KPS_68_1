@@ -200,8 +200,8 @@ const ServicePage = () => {
 
       <div className="flex w-full flex-col items-center justify-between gap-4 px-2 sm:flex-row">
         <p className="text-xs font-medium text-muted-foreground">
-          หน้า {currentPage} จาก {totalPages} (รวม {list?.pagination?.total || 0}{" "}
-          รายการ)
+          หน้า {currentPage} จาก {totalPages} (รวม{" "}
+          {list?.pagination?.total || 0} รายการ)
         </p>
 
         <div className="flex w-full justify-center sm:w-auto">
@@ -217,16 +217,18 @@ const ServicePage = () => {
                 />
               </PaginationItem>
 
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
-                <PaginationItem key={num} className="cursor-pointer">
-                  <PaginationLink
-                    isActive={currentPage === num}
-                    onClick={() => setCurrentPage(num)}
-                  >
-                    {num}
-                  </PaginationLink>
-                </PaginationItem>
-              ))}
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                (num) => (
+                  <PaginationItem key={num} className="cursor-pointer">
+                    <PaginationLink
+                      isActive={currentPage === num}
+                      onClick={() => setCurrentPage(num)}
+                    >
+                      {num}
+                    </PaginationLink>
+                  </PaginationItem>
+                ),
+              )}
 
               <PaginationItem>
                 <PaginationNext
