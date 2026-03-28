@@ -51,6 +51,8 @@ const fmtMonthYear = (s: Date, e: Date) =>
     : `${MONTH_NAMES[s.getMonth()]} – ${MONTH_NAMES[e.getMonth()]} ${e.getFullYear()}`
 const fmtFullDateTH = (d: Date) =>
   `วัน${DAY_LABELS_TH[d.getDay()]}ที่ ${d.getDate()} ${MONTH_NAMES_TH[d.getMonth()]} ${d.getFullYear()+543}`
+const fmtShortDateTH = (d: Date) =>
+  `${d.getDate()} ${MONTH_NAMES_TH[d.getMonth()]} ${d.getFullYear()+543}`
 
 // ── Layout ────────────────────────────────────────────────────────────────────
 type LayoutItem = WorkSchedule & { laneIndex: number; totalLanes: number }
@@ -81,15 +83,27 @@ function layoutDay(events: WorkSchedule[]): LayoutItem[] {
   return result
 }
 
+// ── helpers: month boundary ───────────────────────────────────────────────────
+const getMonthStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1)
+const getMonthEnd   = (d: Date) => new Date(d.getFullYear(), d.getMonth()+1, 0)
+const fmtDate = (d: Date) => {
+  const y = d.getFullYear()
+  const m = String(d.getMonth()+1).padStart(2,"0")
+  const day = String(d.getDate()).padStart(2,"0")
+  return `${y}-${m}-${day}`
+}
+
 // ── MiniCalendar ──────────────────────────────────────────────────────────────
 function MiniCalendar({
-  selected, onSelect, scheduleDates,
+  selected, onSelect, scheduleDates, viewMonth, onViewMonthChange,
 }: {
   selected: Date
   onSelect: (d: Date) => void
   scheduleDates: Set<string>
+  viewMonth: Date
+  onViewMonthChange: (d: Date) => void
 }) {
-  const [view, setView] = useState(() => { const d=new Date(selected); d.setDate(1); return d })
+  const view  = viewMonth
   const today = new Date()
   const year = view.getFullYear(), month = view.getMonth()
   const first = new Date(year,month,1).getDay()
@@ -97,15 +111,18 @@ function MiniCalendar({
   const cells = [...Array(first).fill(null), ...Array.from({length:days},(_,i)=>i+1)]
   while (cells.length%7!==0) cells.push(null)
 
+  const prevMonth = () => { const x=new Date(view); x.setMonth(x.getMonth()-1); onViewMonthChange(x) }
+  const nextMonth = () => { const x=new Date(view); x.setMonth(x.getMonth()+1); onViewMonthChange(x) }
+
   return (
     <div className="w-full select-none">
       <div className="flex items-center justify-between mb-2">
-        <button onClick={()=>setView(d=>{const x=new Date(d);x.setMonth(x.getMonth()-1);return x})}
+        <button onClick={prevMonth}
           className="rounded p-1 hover:bg-muted transition-colors">
           <ChevronLeft className="w-3.5 h-3.5 text-muted-foreground"/>
         </button>
         <span className="text-xs font-semibold">{MONTH_NAMES_TH[month]} {year+543}</span>
-        <button onClick={()=>setView(d=>{const x=new Date(d);x.setMonth(x.getMonth()+1);return x})}
+        <button onClick={nextMonth}
           className="rounded p-1 hover:bg-muted transition-colors">
           <ChevronRight className="w-3.5 h-3.5 text-muted-foreground"/>
         </button>
@@ -192,10 +209,6 @@ function DetailModal({ ev, onClose }: { ev: WorkSchedule; onClose: ()=>void }) {
 interface StaffWeeklyCalendarProps {
   staffId:    number
   staffName?: string
-  /**
-   * "staff"  (default) — แสดงครบ: สถานะทำงาน/หยุด, modal รายละเอียด, legend
-   * "public"           — แสดงแค่ชื่อ + เวลา, ไม่มี modal, ไม่แสดงสถานะ
-   */
   mode?: "staff" | "public"
 }
 
@@ -208,22 +221,27 @@ export default function StaffWeeklyCalendar({ staffId, staffName: nameProp, mode
   const [loading,    setLoading]    = useState(false)
   const [staffName,  setStaffName]  = useState(nameProp ?? "")
 
+  const [calViewMonth,  setCalViewMonth]  = useState(() => getMonthStart(new Date()))
+  const [monthDotDates, setMonthDotDates] = useState<Set<string>>(new Set())
+
   const today    = new Date()
   const weekDays = Array.from({length:7},(_,i)=>addDays(weekStart,i))
   const weekEnd  = weekDays[6]
 
+  const isCurrentWeek = isSameDay(weekStart, getWeekStart(today))
+
   const prevWeek = () => setWeekStart(d=>addDays(d,-7))
   const nextWeek = () => setWeekStart(d=>addDays(d, 7))
-  const goToday  = () => { setWeekStart(getWeekStart(today)); setShowCal(false) }
-  const pickDate = (d: Date) => { setWeekStart(getWeekStart(d)); setShowCal(false) }
+  const goToday  = () => { setWeekStart(getWeekStart(today)); setCalViewMonth(getMonthStart(today)); setShowCal(false) }
+  const pickDate = (d: Date) => { setWeekStart(getWeekStart(d)); setCalViewMonth(getMonthStart(d)); setShowCal(false) }
 
-  // ── fetch ───────────────────────────────────────────────────────────────────
+  // ── fetch อาทิตย์ ────────────────────────────────────────────────────────
   useEffect(() => {
     const load = async () => {
       setLoading(true)
       try {
-        const from = weekStart.toISOString().slice(0,10)
-        const to   = addDays(weekStart,6).toISOString().slice(0,10)
+        const from = fmtDate(weekStart)
+        const to   = fmtDate(addDays(weekStart,6))
         const p    = new URLSearchParams({
           staff_id:  String(staffId),
           date_from: from,
@@ -247,7 +265,31 @@ export default function StaffWeeklyCalendar({ staffId, staffName: nameProp, mode
     load()
   }, [weekStart, staffId])
 
-  // ── derived ─────────────────────────────────────────────────────────────────
+  // ── fetch เดือน (dots) ────────────────────────────────────────────────────
+  useEffect(() => {
+    const loadMonth = async () => {
+      try {
+        const from = fmtDate(getMonthStart(calViewMonth))
+        const to   = fmtDate(getMonthEnd(calViewMonth))
+        const p    = new URLSearchParams({
+          staff_id:  String(staffId),
+          date_from: from,
+          date_to:   to,
+          limit:     "200",
+        })
+        const res  = await fetch(`/api/work-schedule?${p}`)
+        const json = await res.json()
+        const data: WorkSchedule[] = json.data ?? []
+        setMonthDotDates(new Set(data.filter(s=>s.is_active).map(s=>s.date)))
+      } catch(e) {
+        console.error(e)
+        setMonthDotDates(new Set())
+      }
+    }
+    loadMonth()
+  }, [calViewMonth, staffId])
+
+  // ── derived ──────────────────────────────────────────────────────────────
   const weekSchedules  = schedules.filter(s => weekDays.some(d => isSameDay(parseDate(s.date), d)))
   const activeCount    = weekSchedules.filter(s=>s.is_active).length
   const inactiveCount  = weekSchedules.filter(s=>!s.is_active).length
@@ -257,11 +299,8 @@ export default function StaffWeeklyCalendar({ staffId, staffName: nameProp, mode
   const remMins        = totalMins % 60
 
   const dayLayouts     = weekDays.map(day => layoutDay(schedules.filter(s => isSameDay(parseDate(s.date), day))))
-  const daySchedules   = weekDays.map(day => schedules.filter(s => isSameDay(parseDate(s.date), day)))
-  const scheduleDates  = new Set(schedules.filter(s=>s.is_active).map(s=>s.date))
   const gridCols       = `${DAY_COL_W}px repeat(${TOTAL_SLOTS}, 1fr)`
 
-  // role label
   const firstStaff = schedules[0]?.staff
   const roleLabel  = firstStaff?.staff_role === "DOCTOR" ? "แพทย์" : firstStaff?.staff_role === "MED_ASSISTANT" ? "ผู้ช่วยแพทย์" : ""
 
@@ -319,6 +358,8 @@ export default function StaffWeeklyCalendar({ staffId, staffName: nameProp, mode
 
         {/* toolbar */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
+
+          {/* left: prev / next / title */}
           <div className="flex items-center gap-2">
             <Button size="icon" variant="outline" className="h-8 w-8" onClick={prevWeek}>
               <ChevronLeft className="w-4 h-4"/>
@@ -326,24 +367,73 @@ export default function StaffWeeklyCalendar({ staffId, staffName: nameProp, mode
             <Button size="icon" variant="outline" className="h-8 w-8" onClick={nextWeek}>
               <ChevronRight className="w-4 h-4"/>
             </Button>
-            <Button size="sm" variant="outline" className="h-8 gap-1.5 px-3 text-xs" onClick={goToday}>
-              <CalendarDays className="w-3.5 h-3.5"/>วันนี้
-            </Button>
+            <span className="text-sm font-semibold text-foreground">{fmtMonthYear(weekStart,weekEnd)}</span>
           </div>
-          <span className="text-sm font-semibold text-foreground">{fmtMonthYear(weekStart,weekEnd)}</span>
-          <div className="relative">
-            <Button size="sm" variant="outline" className="h-8 gap-1.5 px-3 text-xs" onClick={()=>setShowCal(v=>!v)}>
-              <Calendar className="w-3.5 h-3.5"/>เลือกวันที่
-            </Button>
-            {showCal && (
-              <div className="absolute right-0 top-10 z-40 w-64 rounded-xl border border-border bg-card shadow-xl p-4">
-                <MiniCalendar selected={weekStart} onSelect={pickDate} scheduleDates={scheduleDates}/>
+
+          {/* right: วันนี้ + เลือกวันที่ — button group */}
+          <div className="flex items-center">
+            <div className="flex items-center rounded-lg border border-border overflow-visible">
+
+              {/* ปุ่มวันนี้ */}
+              <button
+                onClick={goToday}
+                className="flex items-center gap-1.5 px-3 h-8 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground border-r border-border transition-colors whitespace-nowrap rounded-l-lg">
+                <CalendarDays className="w-3.5 h-3.5"/> วันนี้
+              </button>
+
+              {/* ปุ่มเลือกวันที่ */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowCal(v => !v)}
+                  className={`flex items-center gap-1.5 px-3 h-8 text-xs font-medium transition-colors whitespace-nowrap rounded-r-lg
+                    ${!isCurrentWeek
+                      ? "text-primary hover:bg-primary/5"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}>
+                  <Calendar className="w-3.5 h-3.5"/>
+                  {!isCurrentWeek ? fmtShortDateTH(weekStart) : "เลือกวันที่"}
+                </button>
+
+                {/* × badge — แสดงเมื่อไม่ใช่สัปดาห์ปัจจุบัน */}
+                {!isCurrentWeek && (
+                  <button
+                    onClick={e => { e.stopPropagation(); goToday() }}
+                    className="absolute -top-1.5 -right-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/80 transition-colors">
+                    <X className="w-2.5 h-2.5"/>
+                  </button>
+                )}
+
+                {showCal && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setShowCal(false)}/>
+                    <div className="absolute right-0 top-10 z-40 w-64 rounded-xl border border-border bg-card shadow-xl p-4">
+                      <MiniCalendar
+                        selected={weekStart}
+                        onSelect={pickDate}
+                        scheduleDates={monthDotDates}
+                        viewMonth={calViewMonth}
+                        onViewMonthChange={setCalViewMonth}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
 
-        {/* loading */}
+        {/* selected week badge */}
+        {!isCurrentWeek && (
+          <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-primary/5">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary px-3 py-0.5 text-xs font-medium">
+              <CalendarDays className="w-3 h-3"/>
+              สัปดาห์: {fmtShortDateTH(weekStart)} – {fmtShortDateTH(weekEnd)}
+            </span>
+            <button onClick={goToday} className="text-xs text-muted-foreground hover:text-foreground underline transition-colors">
+              กลับสัปดาห์นี้
+            </button>
+          </div>
+        )}
+
         {loading && (
           <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
             <span className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin"/>

@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
   Plus, Pencil, Trash2, X, ChevronLeft, ChevronRight,
-  Search, CalendarDays, Clock, User, CheckCircle2, XCircle, AlertCircle
+  Search, CalendarDays, Clock, User, CheckCircle2, XCircle, AlertCircle, Calendar
 } from "lucide-react"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -34,6 +34,15 @@ type FormData = {
   is_active: boolean
 }
 
+// ── แก้ as any: กำหนด type ให้ activeFilter ชัดเจน ─────────────────────────
+type ActiveFilter = "" | "true" | "false"
+
+const ACTIVE_FILTERS: { label: string; value: ActiveFilter }[] = [
+  { label: "ทุกสถานะ", value: "" },
+  { label: "ทำงาน",   value: "true" },
+  { label: "หยุดงาน", value: "false" },
+]
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmtTime = (t: string) => {
   const [h, m] = t.split(":").map(Number)
@@ -41,15 +50,29 @@ const fmtTime = (t: string) => {
 }
 const staffFullName = (s: StaffInfo) => `${s.first_name} ${s.last_name}`
 const roleLabel = (r: string) => r === "DOCTOR" ? "แพทย์" : r === "MED_ASSISTANT" ? "ผู้ช่วยแพทย์" : r
-const MONTH_TH = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."]
+
+const MONTH_TH      = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."]
 const MONTH_TH_FULL = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน",
                        "กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"]
+
 const isSameDay = (a: Date, b: Date) =>
   a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate()
+
+// ใช้ local date เสมอ ป้องกัน UTC timezone shift
+const fmtLocalDate = (d: Date) => {
+  const y  = d.getFullYear()
+  const m  = String(d.getMonth()+1).padStart(2,"0")
+  const dd = String(d.getDate()).padStart(2,"0")
+  return `${y}-${m}-${dd}`
+}
+
 const fmtDateTH = (d: string) => {
   const [y, m, day] = d.split("-")
   return `${parseInt(day)} ${MONTH_TH[parseInt(m)-1]} ${parseInt(y)+543}`
 }
+
+const getMonthStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1)
+const getMonthEnd   = (d: Date) => new Date(d.getFullYear(), d.getMonth()+1, 0)
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
 type Toast = { id: number; type: "success" | "error"; message: string }
@@ -107,6 +130,86 @@ function ConfirmDialog({
   )
 }
 
+// ── MiniCalendar ──────────────────────────────────────────────────────────────
+function MiniCalendar({
+  selected, onSelect, scheduleDates, viewMonth, onViewMonthChange,
+}: {
+  selected: Date | null
+  onSelect: (d: Date) => void
+  scheduleDates: Set<string>
+  viewMonth: Date
+  onViewMonthChange: (d: Date) => void
+}) {
+  const today = new Date()
+  const year  = viewMonth.getFullYear()
+  const month = viewMonth.getMonth()
+  const first = new Date(year, month, 1).getDay()
+  const days  = new Date(year, month+1, 0).getDate()
+  const cells = [...Array(first).fill(null), ...Array.from({length: days}, (_,i) => i+1)]
+  while (cells.length % 7 !== 0) cells.push(null)
+
+  const prevMonth = () => {
+    const x = new Date(viewMonth); x.setMonth(x.getMonth()-1); onViewMonthChange(x)
+  }
+  const nextMonth = () => {
+    const x = new Date(viewMonth); x.setMonth(x.getMonth()+1); onViewMonthChange(x)
+  }
+
+  return (
+    <div className="w-full select-none">
+      {/* nav */}
+      <div className="flex items-center justify-between mb-2">
+        <button onClick={prevMonth} className="rounded p-1 hover:bg-muted transition-colors">
+          <ChevronLeft className="w-3.5 h-3.5 text-muted-foreground"/>
+        </button>
+        <span className="text-xs font-semibold">{MONTH_TH_FULL[month]} {year+543}</span>
+        <button onClick={nextMonth} className="rounded p-1 hover:bg-muted transition-colors">
+          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground"/>
+        </button>
+      </div>
+      {/* day headers */}
+      <div className="grid grid-cols-7 mb-1">
+        {["อา","จ","อ","พ","พฤ","ศ","ส"].map(d => (
+          <div key={d} className="text-center text-[10px] font-medium text-muted-foreground">{d}</div>
+        ))}
+      </div>
+      {/* cells */}
+      <div className="grid grid-cols-7 gap-y-0.5">
+        {cells.map((day, i) => {
+          if (!day) return <div key={i}/>
+          const date    = new Date(year, month, day)
+          const dateStr = fmtLocalDate(date)
+          const isToday = isSameDay(date, today)
+          const isSel   = selected ? isSameDay(date, selected) : false
+          const hasDot  = scheduleDates.has(dateStr)
+          return (
+            <button key={i} onClick={() => onSelect(date)}
+              className={`relative mx-auto flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium transition-colors
+                ${isSel
+                  ? "bg-primary text-primary-foreground"
+                  : isToday
+                  ? "border border-primary text-primary"
+                  : "hover:bg-muted text-foreground"}`}>
+              {day}
+              {hasDot && !isSel && (
+                <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary opacity-70"/>
+              )}
+            </button>
+          )
+        })}
+      </div>
+      {/* วันนี้ shortcut */}
+      <div className="mt-2 border-t border-border pt-2">
+        <button
+          onClick={() => { onSelect(today); onViewMonthChange(getMonthStart(today)) }}
+          className="w-full rounded-md py-1 text-[11px] font-medium text-primary hover:bg-primary/10 transition-colors">
+          วันนี้
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Date Picker Field (popup) ─────────────────────────────────────────────────
 function DatePickerField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false)
@@ -132,7 +235,6 @@ function DatePickerField({ value, onChange }: { value: string; onChange: (v: str
         <CalendarDays className="w-3.5 h-3.5 text-muted-foreground"/> วันที่
       </label>
       <div className="relative">
-        {/* trigger button */}
         <button type="button" onClick={()=>setOpen(v=>!v)}
           className={`w-full flex items-center justify-between rounded-lg border bg-background px-3 py-2 text-sm transition-colors
             ${open ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-muted-foreground/40"}
@@ -140,14 +242,10 @@ function DatePickerField({ value, onChange }: { value: string; onChange: (v: str
           <span>{displayVal}</span>
           <CalendarDays className="w-4 h-4 text-muted-foreground shrink-0"/>
         </button>
-
-        {/* popup */}
         {open && (
           <>
-            {/* backdrop */}
             <div className="fixed inset-0 z-30" onClick={()=>setOpen(false)}/>
             <div className="absolute left-0 top-[calc(100%+6px)] z-40 w-72 rounded-xl border border-border bg-card shadow-xl p-4 select-none">
-              {/* nav */}
               <div className="flex items-center justify-between mb-3">
                 <button type="button"
                   onClick={()=>setView(d=>{const x=new Date(d);x.setMonth(x.getMonth()-1);return x})}
@@ -163,42 +261,33 @@ function DatePickerField({ value, onChange }: { value: string; onChange: (v: str
                   <ChevronRight className="w-4 h-4 text-muted-foreground"/>
                 </button>
               </div>
-              {/* day labels */}
               <div className="grid grid-cols-7 mb-1">
                 {["อา","จ","อ","พ","พฤ","ศ","ส"].map(d=>(
                   <div key={d} className="text-center text-[11px] font-medium text-muted-foreground py-1">{d}</div>
                 ))}
               </div>
-              {/* cells */}
               <div className="grid grid-cols-7">
                 {cells.map((day,i)=>{
                   if (!day) return <div key={i} className="h-8"/>
                   const date    = new Date(year,month,day)
-                  const dateStr = `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`
+                  const dateStr = fmtLocalDate(date)
                   const isToday = isSameDay(date,today)
                   const isSel   = selected ? isSameDay(date,selected) : false
                   return (
                     <button type="button" key={i}
                       onClick={()=>{ onChange(dateStr); setOpen(false) }}
                       className={`mx-auto flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors
-                        ${isSel
-                          ? "bg-primary text-primary-foreground"
-                          : isToday
-                          ? "border border-primary text-primary"
+                        ${isSel ? "bg-primary text-primary-foreground"
+                          : isToday ? "border border-primary text-primary"
                           : "hover:bg-muted text-foreground"}`}>
                       {day}
                     </button>
                   )
                 })}
               </div>
-              {/* today shortcut */}
               <div className="mt-3 border-t border-border pt-3">
                 <button type="button"
-                  onClick={()=>{
-                    const d=new Date()
-                    onChange(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`)
-                    setOpen(false)
-                  }}
+                  onClick={()=>{ onChange(fmtLocalDate(new Date())); setOpen(false) }}
                   className="w-full rounded-md py-1.5 text-xs font-medium text-primary hover:bg-primary/10 transition-colors">
                   วันนี้
                 </button>
@@ -254,8 +343,6 @@ function FormModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
       <div className="relative w-full max-w-md mx-4 rounded-xl border border-border bg-card shadow-xl"
         onClick={e => e.stopPropagation()}>
-
-        {/* header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <h2 className="font-semibold text-foreground">
             {mode === "create" ? "เพิ่มตารางงานใหม่" : "แก้ไขตารางงาน"}
@@ -264,11 +351,7 @@ function FormModal({
             <X className="w-4 h-4"/>
           </button>
         </div>
-
-        {/* body */}
         <div className="px-6 py-5 space-y-4">
-
-          {/* staff — แสดงเฉพาะตอน create */}
           {mode === "create" ? (
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-foreground flex items-center gap-1.5">
@@ -295,10 +378,8 @@ function FormModal({
             </div>
           )}
 
-          {/* date */}
           <DatePickerField value={form.date} onChange={v => set("date", v)}/>
 
-          {/* time — 24h select */}
           <div className="grid grid-cols-2 gap-3">
             {(["starttime","endtime"] as const).map((key, ki) => (
               <div key={key} className="space-y-1.5">
@@ -312,7 +393,7 @@ function FormModal({
                       const hh = String(h).padStart(2,"0")
                       const mm = String(m).padStart(2,"0")
                       const val = `${hh}:${mm}`
-                      return <option key={val} value={val}>{`${hh}:${mm}`}</option>
+                      return <option key={val} value={val}>{val}</option>
                     })
                   )}
                 </select>
@@ -320,7 +401,6 @@ function FormModal({
             ))}
           </div>
 
-          {/* is_active */}
           <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3">
             <div>
               <p className="text-sm font-medium text-foreground">สถานะกะงาน</p>
@@ -343,8 +423,6 @@ function FormModal({
             </p>
           )}
         </div>
-
-        {/* footer */}
         <div className="flex gap-2 justify-end px-6 py-4 border-t border-border">
           <Button size="sm" variant="outline" onClick={onClose} disabled={loading}>ยกเลิก</Button>
           <Button size="sm" onClick={handleSubmit} disabled={loading}>
@@ -358,20 +436,27 @@ function FormModal({
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function ScheduleManagePage() {
-  const [schedules,   setSchedules]   = useState<WorkSchedule[]>([])
-  const [staffList,   setStaffList]   = useState<StaffInfo[]>([])
-  const [loading,     setLoading]     = useState(false)
-  const [saving,      setSaving]      = useState(false)
-  const [search,      setSearch]      = useState("")
-  const [roleFilter,  setRoleFilter]  = useState("")
-  const [activeFilter,setActiveFilter]= useState<"" | "true" | "false">("")
-  const [page,        setPage]        = useState(1)
-  const [total,       setTotal]       = useState(0)
-  const [formMode,    setFormMode]    = useState<"create"|"edit"|null>(null)
-  const [editing,     setEditing]     = useState<WorkSchedule | null>(null)
-  const [confirmId,   setConfirmId]   = useState<number | null>(null)
-  const [toasts,      setToasts]      = useState<Toast[]>([])
+  const [schedules,    setSchedules]    = useState<WorkSchedule[]>([])
+  const [staffList,    setStaffList]    = useState<StaffInfo[]>([])
+  const [loading,      setLoading]      = useState(false)
+  const [saving,       setSaving]       = useState(false)
+  const [search,       setSearch]       = useState("")
+  const [roleFilter,   setRoleFilter]   = useState("")
+  const [activeFilter, setActiveFilter] = useState<ActiveFilter>("")   // ✅ ไม่ใช้ any แล้ว
+  const [page,         setPage]         = useState(1)
+  const [total,        setTotal]        = useState(0)
+  const [formMode,     setFormMode]     = useState<"create"|"edit"|null>(null)
+  const [editing,      setEditing]      = useState<WorkSchedule | null>(null)
+  const [confirmId,    setConfirmId]    = useState<number | null>(null)
+  const [toasts,       setToasts]       = useState<Toast[]>([])
 
+  // ── MiniCalendar state ───────────────────────────────────────────────────────
+  const [showCal,          setShowCal]          = useState(false)
+  const [selectedDate,     setSelectedDate]     = useState<Date | null>(() => new Date())
+  const [calViewMonth,     setCalViewMonth]     = useState(() => getMonthStart(new Date()))
+  const [monthDotDates,    setMonthDotDates]    = useState<Set<string>>(new Set())
+
+  const today = new Date()
   const LIMIT = 10
 
   // ── toast helpers ────────────────────────────────────────────────────────────
@@ -384,15 +469,12 @@ export default function ScheduleManagePage() {
 
   // ── fetch staff list ─────────────────────────────────────────────────────────
   useEffect(() => {
-    // ดึง staff list จาก work-schedule แล้ว dedupe
     fetch("/api/work-schedule?limit=200")
       .then(r => r.json())
       .then(j => {
-        const schedules = j.data ?? []
+        const data: WorkSchedule[] = j.data ?? []
         const map = new Map<number, StaffInfo>()
-        schedules.forEach((s: WorkSchedule) => {
-          if (s.staff && !map.has(s.staff_id)) map.set(s.staff_id, s.staff)
-        })
+        data.forEach(s => { if (s.staff && !map.has(s.staff_id)) map.set(s.staff_id, s.staff) })
         setStaffList(Array.from(map.values()).sort((a,b) => a.id - b.id))
       })
       .catch(() => {})
@@ -405,6 +487,12 @@ export default function ScheduleManagePage() {
       const p = new URLSearchParams({ page: String(page), limit: String(LIMIT) })
       if (roleFilter)   p.set("role", roleFilter)
       if (activeFilter) p.set("is_active", activeFilter)
+      // ถ้าเลือกวันจาก MiniCalendar ให้ filter วันนั้น
+      if (selectedDate) {
+        const ds = fmtLocalDate(selectedDate)
+        p.set("date_from", ds)
+        p.set("date_to",   ds)
+      }
       const res  = await fetch(`/api/work-schedule?${p}`)
       const json = await res.json()
       setSchedules(json.data ?? [])
@@ -414,9 +502,27 @@ export default function ScheduleManagePage() {
     } finally {
       setLoading(false)
     }
-  }, [page, roleFilter, activeFilter])
+  }, [page, roleFilter, activeFilter, selectedDate])
 
   useEffect(() => { fetchSchedules() }, [fetchSchedules])
+
+  // ── fetch dot dates รายเดือน ──────────────────────────────────────────────
+  useEffect(() => {
+    const loadMonth = async () => {
+      try {
+        const from = fmtLocalDate(getMonthStart(calViewMonth))
+        const to   = fmtLocalDate(getMonthEnd(calViewMonth))
+        const p    = new URLSearchParams({ date_from: from, date_to: to, limit: "500" })
+        const res  = await fetch(`/api/work-schedule?${p}`)
+        const json = await res.json()
+        const data: WorkSchedule[] = json.data ?? []
+        setMonthDotDates(new Set(data.filter(s => s.is_active).map(s => s.date)))
+      } catch {
+        setMonthDotDates(new Set())
+      }
+    }
+    loadMonth()
+  }, [calViewMonth])
 
   // ── create ───────────────────────────────────────────────────────────────────
   const handleCreate = async (data: FormData) => {
@@ -485,7 +591,7 @@ export default function ScheduleManagePage() {
     }
   }
 
-  // ── filter client-side by search ─────────────────────────────────────────────
+  // ── client-side search filter ─────────────────────────────────────────────
   const filtered = schedules.filter(s => {
     if (!search) return true
     const name = staffFullName(s.staff).toLowerCase()
@@ -493,6 +599,21 @@ export default function ScheduleManagePage() {
   })
 
   const totalPages = Math.ceil(total / LIMIT)
+
+  // ── pick date จาก MiniCalendar ────────────────────────────────────────────
+  const pickDate = (d: Date) => {
+    setSelectedDate(d)
+    setCalViewMonth(getMonthStart(d))
+    setPage(1)
+    setShowCal(false)
+  }
+  const clearDate = () => {
+    setSelectedDate(null)
+    setPage(1)
+  }
+  const goToday = () => {
+    pickDate(today)
+  }
 
   return (
     <div className="space-y-6 p-6">
@@ -503,8 +624,7 @@ export default function ScheduleManagePage() {
           <h1 className="text-2xl font-bold tracking-tight text-foreground">จัดการตารางงาน</h1>
           <p className="text-sm text-muted-foreground mt-0.5">เพิ่ม แก้ไข และลบตารางการทำงานของเจ้าหน้าที่</p>
         </div>
-        <Button onClick={() => { setEditing(null); setFormMode("create") }}
-          className="gap-2">
+        <Button onClick={() => { setEditing(null); setFormMode("create") }} className="gap-2">
           <Plus className="w-4 h-4"/> เพิ่มตารางงาน
         </Button>
       </div>
@@ -541,15 +661,11 @@ export default function ScheduleManagePage() {
             ))}
           </div>
 
-          {/* active filter */}
+          {/* active filter ✅ ไม่มี as any แล้ว */}
           <div className="flex items-center gap-1.5">
-            {[
-              { label: "ทุกสถานะ", value: "" },
-              { label: "ทำงาน",   value: "true" },
-              { label: "หยุดงาน", value: "false" },
-            ].map(r => (
+            {ACTIVE_FILTERS.map(r => (
               <button key={r.value}
-                onClick={() => { setActiveFilter(r.value as any); setPage(1) }}
+                onClick={() => { setActiveFilter(r.value); setPage(1) }}
                 className={`rounded-full px-3 py-1.5 text-xs font-medium border transition-colors
                   ${activeFilter === r.value
                     ? r.value === "false"
@@ -561,9 +677,67 @@ export default function ScheduleManagePage() {
             ))}
           </div>
 
-          <span className="ml-auto text-xs text-muted-foreground">{total} รายการ</span>
+          {/* ── MiniCalendar + ปุ่มวันนี้ ─────────────────────────────────── */}
+          <div className="flex items-center gap-1.5 ml-auto">
+
+            {/* ปุ่มวันนี้ */}
+            <Button size="sm" variant="outline" className="h-8 gap-1.5 px-3 text-xs" onClick={goToday}>
+              <CalendarDays className="w-3.5 h-3.5"/> วันนี้
+            </Button>
+
+            {/* ปุ่มเลือกวันที่ + popup MiniCalendar */}
+            <div className="relative">
+              <Button size="sm" variant="outline"
+                className={`h-8 gap-1.5 px-3 text-xs ${selectedDate ? "border-primary text-primary" : ""}`}
+                onClick={() => setShowCal(v => !v)}>
+                <Calendar className="w-3.5 h-3.5"/>
+                {selectedDate
+                  ? fmtDateTH(fmtLocalDate(selectedDate))
+                  : "เลือกวันที่"}
+              </Button>
+
+              {/* clear selected date */}
+              {selectedDate && (
+                <button
+                  onClick={clearDate}
+                  className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] hover:bg-primary/80 transition-colors">
+                  <X className="w-2.5 h-2.5"/>
+                </button>
+              )}
+
+              {showCal && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setShowCal(false)}/>
+                  <div className="absolute right-0 top-10 z-40 w-64 rounded-xl border border-border bg-card shadow-xl p-4">
+                    <MiniCalendar
+                      selected={selectedDate}
+                      onSelect={pickDate}
+                      scheduleDates={monthDotDates}
+                      viewMonth={calViewMonth}
+                      onViewMonthChange={setCalViewMonth}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          <span className="text-xs text-muted-foreground">{total} รายการ</span>
         </div>
       </Card>
+
+      {/* selected date badge */}
+      {selectedDate && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary px-3 py-1 text-xs font-medium">
+            <CalendarDays className="w-3 h-3"/>
+            แสดงวันที่: {fmtDateTH(fmtLocalDate(selectedDate))}
+          </span>
+          <button onClick={clearDate} className="text-xs text-muted-foreground hover:text-foreground underline transition-colors">
+            ล้างตัวกรอง
+          </button>
+        </div>
+      )}
 
       {/* table */}
       <Card className="border border-border bg-card overflow-hidden">
@@ -600,8 +774,6 @@ export default function ScheduleManagePage() {
                   <tr key={s.id}
                     className={`border-b border-border/50 transition-colors hover:bg-muted/30
                       ${i % 2 === 0 ? "" : "bg-muted/10"}`}>
-
-                    {/* staff name */}
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
@@ -610,8 +782,6 @@ export default function ScheduleManagePage() {
                         <span className="font-medium text-foreground">{staffFullName(s.staff)}</span>
                       </div>
                     </td>
-
-                    {/* role */}
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium
                         ${s.staff.staff_role === "DOCTOR"
@@ -620,16 +790,10 @@ export default function ScheduleManagePage() {
                         {roleLabel(s.staff.staff_role)}
                       </span>
                     </td>
-
-                    {/* date */}
                     <td className="px-4 py-3 text-foreground">{fmtDateTH(s.date)}</td>
-
-                    {/* time */}
                     <td className="px-4 py-3 text-foreground font-mono text-xs">
                       {fmtTime(s.starttime)} – {fmtTime(s.endtime)}
                     </td>
-
-                    {/* status */}
                     <td className="px-4 py-3 text-center">
                       <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-medium
                         ${s.is_active
@@ -639,8 +803,6 @@ export default function ScheduleManagePage() {
                         {s.is_active ? "ทำงาน" : "หยุดงาน"}
                       </span>
                     </td>
-
-                    {/* actions */}
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
@@ -665,9 +827,7 @@ export default function ScheduleManagePage() {
         {/* pagination */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between border-t border-border px-4 py-3">
-            <p className="text-xs text-muted-foreground">
-              หน้า {page} จาก {totalPages}
-            </p>
+            <p className="text-xs text-muted-foreground">หน้า {page} จาก {totalPages}</p>
             <div className="flex gap-1.5">
               <Button size="icon" variant="outline" className="h-8 w-8"
                 disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
@@ -704,7 +864,6 @@ export default function ScheduleManagePage() {
         />
       )}
 
-      {/* toasts */}
       <ToastContainer toasts={toasts} onRemove={removeToast}/>
     </div>
   )
