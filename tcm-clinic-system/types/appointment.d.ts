@@ -21,6 +21,13 @@ export interface AppointmentData {
     status: string;
 }
 
+export type AppointmentStatusUpdate = "CANCELLED" | "COMPLETED";
+
+export interface AppointmentStatusUpdateResponse {
+    message: string;
+    appointment: AppointmentData;
+}
+
 export interface MedAssistAppointmentListItem {
     id: number;
     patientId: number;

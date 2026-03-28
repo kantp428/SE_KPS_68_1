@@ -48,8 +48,7 @@ import {
 import { useServiceOptions } from "@/hooks/useServiceOptions";
 import { useUpdateHealthProfile } from "@/hooks/useUpdateHealthProfile";
 import axios from "axios";
-
-const STAFF_ID = 1; // TODO: replace with useContext/session
+import { useAuth } from "@/context/AuthContext";
 
 const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   IN_PROGRESS: {
@@ -129,6 +128,8 @@ function StatItem({
 }
 
 const DoctorPatientPage = () => {
+  const auth = useAuth();
+  const staffId = auth.user?.staff?.id;
   const params = useParams();
   const router = useRouter();
   const treatmentId = Number(params.id);
@@ -161,10 +162,12 @@ const DoctorPatientPage = () => {
       })
       .then((response) =>
         setRoomOptions(
-          (response.data?.data || []).map((room: { id: number; name: string }) => ({
-            value: room.id,
-            label: room.name,
-          })),
+          (response.data?.data || []).map(
+            (room: { id: number; name: string }) => ({
+              value: room.id,
+              label: room.name,
+            }),
+          ),
         ),
       )
       .catch(() => {});
@@ -271,7 +274,7 @@ const DoctorPatientPage = () => {
     if (values.treatmentItems?.length) {
       try {
         await submitTreatmentItems({
-          doctorId: STAFF_ID,
+          doctorId: staffId!,
           patientId,
           healthProfileId,
           invoiceId,
@@ -320,12 +323,16 @@ const DoctorPatientPage = () => {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="/doctor/treatment">คนไข้ของฉัน</BreadcrumbLink>
+            <BreadcrumbLink href="/doctor/treatment">
+              คนไข้ของฉัน
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbPage>
-              {patientLoading ? "กำลังโหลด..." : patient?.fullName ?? "ข้อมูลคนไข้"}
+              {patientLoading
+                ? "กำลังโหลด..."
+                : (patient?.fullName ?? "ข้อมูลคนไข้")}
             </BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
@@ -397,8 +404,16 @@ const DoctorPatientPage = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-3 gap-4">
-                    <StatItem label="น้ำหนัก" value={profile.weight} unit="kg" />
-                    <StatItem label="ส่วนสูง" value={profile.height} unit="cm" />
+                    <StatItem
+                      label="น้ำหนัก"
+                      value={profile.weight}
+                      unit="kg"
+                    />
+                    <StatItem
+                      label="ส่วนสูง"
+                      value={profile.height}
+                      unit="cm"
+                    />
                     <StatItem label="ความดัน" value={profile.bp} unit="mmHg" />
                   </div>
 

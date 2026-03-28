@@ -2,6 +2,11 @@ import prisma from "@/lib/prisma";
 import { appointment_status_enum } from "@prisma/client";
 import { NextResponse } from "next/server";
 
+const ALLOWED_STATUS_UPDATES = [
+    appointment_status_enum.CANCELLED,
+    appointment_status_enum.COMPLETED,
+] as const;
+
 export async function PATCH(
     req: Request,
     { params }: { params: Promise<{ id: string }> }
@@ -19,9 +24,14 @@ export async function PATCH(
         const body = await req.json();
         const { status } = body;
 
-        if (!status || !Object.values(appointment_status_enum).includes(status)) {
+        if (
+            !status ||
+            !ALLOWED_STATUS_UPDATES.includes(
+                status as (typeof ALLOWED_STATUS_UPDATES)[number]
+            )
+        ) {
             return NextResponse.json(
-                { message: "Invalid status value" },
+                { message: "Status must be CANCELLED or COMPLETED" },
                 { status: 400 }
             );
         }

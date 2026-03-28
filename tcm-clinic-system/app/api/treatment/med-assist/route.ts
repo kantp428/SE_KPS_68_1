@@ -14,10 +14,21 @@ export async function GET(req: Request) {
     const limit = Math.max(1, parseInt(searchParams.get("limit") || "10", 10));
     const status = searchParams.get("status");
     const name = searchParams.get("name");
+    const staffId = searchParams.get("staffId");
     const serviceIdsRaw = searchParams.get("serviceIds");
     const date = searchParams.get("date");
 
     const skip = (page - 1) * limit;
+
+    console.log("GET Treatment Params:", {
+      page,
+      limit,
+      status,
+      name,
+      staffId,
+      serviceIdsRaw,
+      date,
+    });
 
     let dateFilter = undefined;
     if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -28,6 +39,7 @@ export async function GET(req: Request) {
     }
     const isObserve = searchParams.get("isObserve") === "true";
     const OBSERVE_ID = 1;
+    const parsedStaffId = staffId ? parseInt(staffId, 10) : undefined;
 
     const parsedServiceIds = serviceIdsRaw
       ? serviceIdsRaw
@@ -38,16 +50,15 @@ export async function GET(req: Request) {
 
     const where: Prisma.treatmentWhereInput = {
       ...(status ? { treatment_status: status as treatment_status_enum } : {}),
-
-      // --- ปรับปรุง Logic ตรงนี้ ---
+      ...(parsedStaffId && !isNaN(parsedStaffId)
+        ? { doctor_id: parsedStaffId }
+        : {}),
       service_id: isObserve
         ? OBSERVE_ID // กรณี Observe: เอาเฉพาะ ID 1
         : {
             not: OBSERVE_ID, // กรณีปกติ: ห้ามเอา ID 1
             ...(parsedServiceIds.length > 0 ? { in: parsedServiceIds } : {}), // ถ้ามีการเลือก Dropdown มา ก็กรองตามนั้น (โดยที่ไม่มี ID 1 ปน)
           },
-      // ---------------------------
-
       ...(dateFilter ? { start_at: dateFilter } : {}),
       ...(name
         ? {
