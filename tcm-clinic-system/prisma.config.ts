@@ -4,16 +4,14 @@ import fs from "fs";
 import path from "path";
 
 const envLocalPath = path.resolve(process.cwd(), ".env.local");
+const fallbackDatabaseUrl =
+  "postgresql://placeholder:placeholder@localhost:5432/placeholder";
 
 if (!process.env.DATABASE_URL && fs.existsSync(envLocalPath)) {
   dotenv.config({ path: envLocalPath });
 }
 
-const dbUrl = process.env.DATABASE_URL;
-
-if (!dbUrl) {
-  throw new Error("DATABASE_URL is not defined");
-}
+const dbUrl = process.env.DATABASE_URL ?? fallbackDatabaseUrl;
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
