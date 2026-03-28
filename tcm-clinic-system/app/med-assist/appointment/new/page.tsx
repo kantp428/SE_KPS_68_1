@@ -27,7 +27,7 @@ import { format } from "date-fns";
 import { th } from "date-fns/locale";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
@@ -54,7 +54,7 @@ type PatientOption = Option & { thaiId: string };
 type PatientDetail = { id: number; fullName: string; thaiId: string };
 type Slot = { time: string; isAvailable: boolean; reason?: string };
 
-const NewMedAssistAppointmentPage = () => {
+const NewMedAssistAppointmentPageContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const patientIdParam = searchParams.get("patientId");
@@ -412,4 +412,10 @@ const NewMedAssistAppointmentPage = () => {
   );
 };
 
-export default NewMedAssistAppointmentPage;
+export default function NewMedAssistAppointmentPage() {
+  return (
+    <Suspense fallback={<div className="mx-auto max-w-3xl p-6" />}>
+      <NewMedAssistAppointmentPageContent />
+    </Suspense>
+  );
+}

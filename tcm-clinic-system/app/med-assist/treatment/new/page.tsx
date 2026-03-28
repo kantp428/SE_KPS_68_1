@@ -27,7 +27,7 @@ import axios from "axios";
 import { format } from "date-fns";
 import { Clock3, Lock } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
@@ -144,7 +144,7 @@ const minuteOptions = Array.from({ length: 60 }, (_, i) =>
   i.toString().padStart(2, "0"),
 );
 
-const NewTreatmentPage = () => {
+const NewTreatmentPageContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const appointmentIdParam = searchParams.get("appointmentId");
@@ -729,4 +729,10 @@ const NewTreatmentPage = () => {
   );
 };
 
-export default NewTreatmentPage;
+export default function NewTreatmentPage() {
+  return (
+    <Suspense fallback={<div className="mx-auto max-w-3xl p-6" />}>
+      <NewTreatmentPageContent />
+    </Suspense>
+  );
+}

@@ -1,15 +1,9 @@
 import { ThemeProvider } from "@/components/theme-provider";
 import type { Metadata } from "next";
-import { Chivo_Mono } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/context/AuthContext";
-
-const chivoMono = Chivo_Mono({
-  subsets: ["latin"],
-  variable: "--font-chivo-mono",
-});
 
 export const metadata: Metadata = {
   title: "TCM-CLINIC (SE-Project)",
@@ -23,7 +17,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${chivoMono.variable} antialiased`}>
+      <body className="antialiased">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

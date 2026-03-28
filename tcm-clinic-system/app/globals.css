@@ -271,7 +271,7 @@ root {
   --color-sidebar-ring: var(--sidebar-ring);
 
   --font-sans: "Google Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-chivo-mono), ui-monospace, SFMono-Regular, monospace;
+  --font-mono: "Chivo Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
