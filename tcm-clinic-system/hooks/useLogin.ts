@@ -1,20 +1,16 @@
 "use client";
 
 import { handleException } from "@/app/utils/handleException";
+import { useAuth } from "@/context/AuthContext";
+import { apiClient } from "@/lib/api-client";
 import { AuthUser, LoginFormValues } from "@/types/auth";
 import axios from "axios";
 import { useCallback, useState } from "react";
-import { useAuth } from "@/context/AuthContext";
 
 /* ===============================
    Axios instance
 ================================ */
-const api = axios.create({
-    baseURL: `${process.env.NEXT_PUBLIC_API_BASE_URL}`,
-    headers: {
-        "Content-Type": "application/json",
-    },
-});
+const api = apiClient;
 
 /* ===============================
    API functions (pure)
