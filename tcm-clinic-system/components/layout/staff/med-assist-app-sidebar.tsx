@@ -2,6 +2,26 @@
 
 import { useEffect, useState, type ComponentType } from "react";
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  Calendar,
+  CalendarDays,
+  ChevronRight,
+  ChevronsUpDown,
+  ClipboardPlus,
+  Cross,
+  DoorOpen,
+  HeartPulse,
+  Home,
+  LogOut,
+  Pill,
+  ReceiptText,
+  UserCircle2Icon,
+  Users,
+} from "lucide-react";
+
+import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 import {
   Sidebar,
@@ -23,33 +43,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Calendar,
-  CalendarDays,
-  ChevronRight,
-  ChevronsUpDown,
-  ClipboardPlus,
-  Cross,
-  DoorOpen,
-  HeartPulse,
-  Home,
-  LogOut,
-  Pill,
-  ReceiptText,
-  UserCircle2Icon,
-  Users,
-} from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
 
 const userSign = {
   title: "TCM CLINIC",
   icon: <HeartPulse className="size-6" />,
   label: "Application",
 };
-
-// Mock user removed
 
 type MenuItem = {
   title: string;
@@ -74,7 +73,16 @@ const items = [
     ],
   },
   { title: "การชำระเงิน", url: "/med-assist/payment", icon: ReceiptText },
-  { title: "ตารางงาน", url: "/med-assist/schedule", icon: CalendarDays },
+  {
+    title: "ตารางงาน",
+    url: "/med-assist/schedule",
+    icon: CalendarDays,
+    children: [
+      { title: "ตารางงานของฉัน", url: "/med-assist/schedule" },
+      { title: "ตารางงานรวม", url: "/med-assist/schedule/staff" },
+      { title: "จัดการตารางงาน", url: "/med-assist/schedule/manage" },
+    ],
+  },
   { title: "คนไข้", url: "/med-assist/patients", icon: Users },
   { title: "บริการ", url: "/med-assist/service", icon: ClipboardPlus },
   { title: "ห้อง", url: "/med-assist/room", icon: DoorOpen },
@@ -85,28 +93,85 @@ function isActivePath(pathname: string, url: string) {
   return url === "/med-assist" ? pathname === url : pathname.startsWith(url);
 }
 
-// Exact match for child/leaf items to prevent parent URL bleeding into siblings
 function isActiveChild(pathname: string, url: string) {
   return pathname === url;
 }
 
+function getInitialOpenMenus(pathname: string) {
+  return items.reduce<Record<string, boolean>>((acc, item) => {
+    if (item.children?.length) {
+      acc[item.url] = pathname.startsWith(item.url);
+    }
+    return acc;
+  }, {});
+}
+
+type AccountButtonProps = {
+  isLoading: boolean;
+  fullName?: string;
+  username?: string;
+  role?: string;
+  staffRole?: string;
+};
+
+function AccountButton({
+  isLoading,
+  fullName,
+  username,
+  role,
+  staffRole,
+}: AccountButtonProps) {
+  return (
+    <SidebarMenuButton
+      size="lg"
+      className="hover:bg-sidebar-accent transition-colors data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+      type="button"
+    >
+      <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+        <UserCircle2Icon className="size-5" />
+      </div>
+
+      <div className="grid flex-1 text-left text-sm leading-tight group-data-[state=collapsed]:hidden">
+        <span className="truncate font-semibold">
+          {isLoading ? "กำลังโหลด..." : fullName || username || "Guest"}
+        </span>
+        <span className="truncate text-xs">
+          {staffRole || role || "ผู้ใช้งาน"}
+        </span>
+      </div>
+      <ChevronsUpDown className="ml-auto size-4 opacity-50 group-data-[state=collapsed]:hidden" />
+    </SidebarMenuButton>
+  );
+}
+
 export function MedAssistAppSidebar() {
   const pathname = usePathname();
-  const { user, isLoading, logout } = useAuth() || {};
-  const [isTreatmentOpen, setIsTreatmentOpen] = useState(
-    pathname.startsWith("/med-assist/treatment"),
+  const { user, isLoading, logout } = useAuth();
+  const [isMounted, setIsMounted] = useState(false);
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() =>
+    getInitialOpenMenus(pathname),
   );
 
   useEffect(() => {
-    if (pathname.startsWith("/med-assist/treatment")) {
-      setIsTreatmentOpen(true);
-    }
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    setOpenMenus((current) => {
+      const next = { ...current };
+
+      items.forEach((item) => {
+        if (item.children?.length && pathname.startsWith(item.url)) {
+          next[item.url] = true;
+        }
+      });
+
+      return next;
+    });
   }, [pathname]);
 
   const handleLogout = async () => {
-    if (logout) {
-      await logout();
-    }
+    await logout();
   };
 
   return (
@@ -114,44 +179,41 @@ export function MedAssistAppSidebar() {
       <SidebarHeader className="py-4">
         <SidebarMenu>
           <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton
-                  size="lg"
-                  className="hover:bg-sidebar-accent transition-colors data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+            {isMounted ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <AccountButton
+                    isLoading={isLoading}
+                    fullName={user?.fullName}
+                    username={user?.username}
+                    role={user?.role}
+                    staffRole={user?.staffRole}
+                  />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+                  side="bottom"
+                  align="end"
+                  sideOffset={4}
                 >
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                    <UserCircle2Icon className="size-5" />
-                  </div>
-
-                  <div className="grid flex-1 text-left text-sm leading-tight group-data-[state=collapsed]:hidden">
-                    <span className="truncate font-semibold">
-                      {isLoading
-                        ? "กำลังโหลด..."
-                        : user?.fullName || user?.username || "Guest"}
-                    </span>
-                    <span className="truncate text-xs">
-                      {user?.staffRole || user?.role || "ผู้ใช้งาน"}
-                    </span>
-                  </div>
-                  <ChevronsUpDown className="ml-auto size-4 opacity-50 group-data-[state=collapsed]:hidden" />
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-                side="bottom"
-                align="end"
-                sideOffset={4}
-              >
-                <DropdownMenuItem
-                  onClick={handleLogout}
-                  className="text-destructive focus:text-destructive cursor-pointer"
-                >
-                  <LogOut className="size-4 mr-2" />
-                  <span>ออกจากระบบ</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    className="cursor-pointer text-destructive focus:text-destructive"
+                  >
+                    <LogOut className="mr-2 size-4" />
+                    <span>ออกจากระบบ</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <AccountButton
+                isLoading={isLoading}
+                fullName={user?.fullName}
+                username={user?.username}
+                role={user?.role}
+                staffRole={user?.staffRole}
+              />
+            )}
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
@@ -164,24 +226,31 @@ export function MedAssistAppSidebar() {
                 const isActive = isActivePath(pathname, item.url);
 
                 if (item.children?.length) {
+                  const isOpen = openMenus[item.url] ?? false;
+
                   return (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton
                         tooltip={item.title}
                         isActive={isActive}
-                        onClick={() => setIsTreatmentOpen((open) => !open)}
+                        onClick={() =>
+                          setOpenMenus((current) => ({
+                            ...current,
+                            [item.url]: !current[item.url],
+                          }))
+                        }
                       >
                         <item.icon />
                         <span>{item.title}</span>
                         <ChevronRight
                           className={cn(
                             "ml-auto size-4 transition-transform group-data-[state=collapsed]:hidden",
-                            isTreatmentOpen && "rotate-90",
+                            isOpen && "rotate-90",
                           )}
                         />
                       </SidebarMenuButton>
 
-                      {isTreatmentOpen ? (
+                      {isOpen ? (
                         <SidebarMenuSub>
                           {item.children.map((child) => (
                             <SidebarMenuSubItem key={child.url}>
