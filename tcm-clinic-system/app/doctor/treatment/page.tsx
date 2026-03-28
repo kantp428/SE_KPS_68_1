@@ -3,11 +3,10 @@
 import { format, parseISO } from "date-fns";
 import { th } from "date-fns/locale";
 import {
-  Activity,
   ChevronRight,
   Clock,
   RefreshCcw,
-  Search,
+  Search
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -35,13 +34,15 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+import { useAuth } from "@/context/AuthContext";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useDoctorTreatment } from "@/hooks/useDoctorTreatment";
 import { cn } from "@/lib/utils";
 
-const STAFF_ID = 1;
-
 const DoctorTreatmentPage = () => {
+  const auth = useAuth();
+  const staffId = auth.user?.staff?.id;
+
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const [nameSearch, setNameSearch] = useState("");
@@ -49,8 +50,9 @@ const DoctorTreatmentPage = () => {
 
   const debouncedName = useDebounce(nameSearch, 400);
 
-  const { data, pagination, loading, refetch } = useDoctorTreatment(
-    STAFF_ID,
+  // console.log(staff);
+  const { data, pagination, loading, refetch, error } = useDoctorTreatment(
+    staffId ?? 0,
     currentPage,
     10,
     debouncedName,
@@ -135,7 +137,59 @@ const DoctorTreatmentPage = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading ? (
+                {auth.isLoading ? (
+                  Array.from({ length: 5 }).map((_, index) => (
+                    <TableRow key={index}>
+                      <TableCell>
+                        <Skeleton className="h-5 w-32" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="mx-auto h-5 w-24" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="mx-auto h-5 w-24" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="mx-auto h-5 w-16" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="mx-auto h-5 w-16" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="mx-auto h-5 w-16" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="mx-auto h-5 w-24" />
+                      </TableCell>
+
+                      <TableCell />
+                    </TableRow>
+                  ))
+                ) : !staffId ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={9}
+                      className="text-center py-12 text-muted-foreground"
+                    >
+                      <div className="flex flex-col items-center gap-2">
+                        <Clock className="h-8 w-8 opacity-20" />
+                        <p>ไม่พบข้อมูลบุคลากรของบัญชีที่ล็อกอินอยู่</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : error ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={9}
+                      className="text-center py-12 text-muted-foreground"
+                    >
+                      <div className="flex flex-col items-center gap-2">
+                        <Clock className="h-8 w-8 opacity-20" />
+                        <p>{error}</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : loading ? (
                   Array.from({ length: 5 }).map((_, index) => (
                     <TableRow key={index}>
                       <TableCell>
