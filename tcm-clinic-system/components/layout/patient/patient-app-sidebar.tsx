@@ -19,10 +19,10 @@ import {
   LogOut,
   ChevronsUpDown,
   CalendarDays,
-  DoorOpen,
   HeartPulse,
   Home,
   UserCircle2Icon,
+  CircleCheckBig,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -37,6 +37,7 @@ const userSign = {
 const items = [
   { title: "หน้าหลัก", url: "/patient", icon: Home },
   { title: "จอง", url: "/patient/appointment", icon: CalendarDays },
+  { title: "ประวัติการจอง", url: "/patient/appointment/list", icon: CircleCheckBig },
   { title: "ข้อมูลส่วนตัว", url: "/patient/profile", icon: UserCircle2Icon },
 
 ];
