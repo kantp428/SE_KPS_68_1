@@ -75,6 +75,7 @@ const items = [
   },
   { title: "การชำระเงิน", url: "/med-assist/payment", icon: ReceiptText },
   { title: "ตารางงาน", url: "/med-assist/schedule", icon: CalendarDays },
+  { title: "คนไข้", url: "/med-assist/patients", icon: Users },
   { title: "บริการ", url: "/med-assist/service", icon: ClipboardPlus },
   { title: "ห้อง", url: "/med-assist/room", icon: DoorOpen },
   { title: "ยา", url: "/med-assist/medicine", icon: Pill },
@@ -125,9 +126,11 @@ export function MedAssistAppSidebar() {
 
                   <div className="grid flex-1 text-left text-sm leading-tight group-data-[state=collapsed]:hidden">
                     <span className="truncate font-semibold">
-                      {isLoading ? "กำลังโหลด..." : (user?.fullName || user?.username || "Guest")}
+                      {isLoading
+                        ? "กำลังโหลด..."
+                        : user?.fullName || user?.username || "Guest"}
                     </span>
-                    <span className="truncate text-xs text-white/70">
+                    <span className="truncate text-xs">
                       {user?.staffRole || user?.role || "ผู้ใช้งาน"}
                     </span>
                   </div>
@@ -140,7 +143,10 @@ export function MedAssistAppSidebar() {
                 align="end"
                 sideOffset={4}
               >
-                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive cursor-pointer">
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="text-destructive focus:text-destructive cursor-pointer"
+                >
                   <LogOut className="size-4 mr-2" />
                   <span>ออกจากระบบ</span>
                 </DropdownMenuItem>

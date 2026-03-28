@@ -72,7 +72,7 @@ export function PatientAppSidebar() {
                     <span className="truncate font-semibold">
                       {isLoading ? "กำลังโหลด..." : (user?.fullName || user?.username || "Guest")}
                     </span>
-                    <span className="truncate text-xs text-white/70">
+                    <span className="truncate text-xs">
                       {user?.role || "ผู้ใช้งาน"}
                     </span>
                   </div>
