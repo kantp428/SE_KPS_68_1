@@ -65,10 +65,13 @@ const items = [
   { title: "หน้าหลัก", url: "/med-assist", icon: Home },
   { title: "จอง", url: "/med-assist/appointment", icon: Calendar },
   {
-    title: "การบำบัด", url: "/med-assist/treatment", icon: Cross, children: [
+    title: "การบำบัด",
+    url: "/med-assist/treatment",
+    icon: Cross,
+    children: [
       { title: "รายการการบำบัด", url: "/med-assist/treatment" },
       { title: "เพิ่มการบำบัด", url: "/med-assist/treatment/new" },
-    ]
+    ],
   },
   { title: "การชำระเงิน", url: "/med-assist/payment", icon: ReceiptText },
   { title: "ตารางงาน", url: "/med-assist/schedule", icon: CalendarDays },

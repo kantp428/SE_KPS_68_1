@@ -34,8 +34,6 @@ const userSign = {
   label: "Application",
 };
 
-
-
 const items = [
   { title: "หน้าหลัก", url: "/patient", icon: Home },
   { title: "จอง", url: "/patient/appointment", icon: CalendarDays },
