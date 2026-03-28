@@ -47,6 +47,10 @@ const createPatientSchema = z.object({
 
 type CreatePatientFormValues = z.infer<typeof createPatientSchema>;
 
+function formatThaiDateWithBuddhistYear(date: Date) {
+  return `${format(date, "d MMMM", { locale: th })} ${date.getFullYear() + 543}`;
+}
+
 export default function CreatePatientPage() {
   const router = useRouter();
   const [birthdateOpen, setBirthdateOpen] = useState(false);
@@ -76,7 +80,7 @@ export default function CreatePatientPage() {
     ? new Date(`${birthdate}T00:00:00`)
     : undefined;
   const birthdateLabel = birthdateValue
-    ? `${format(birthdateValue, "PPP", { locale: th })} (อายุ ${differenceInYears(new Date(), birthdateValue)} ปี)`
+    ? `${formatThaiDateWithBuddhistYear(birthdateValue)} (อายุ ${differenceInYears(new Date(), birthdateValue)} ปี)`
     : null;
 
   const onSubmit = async (data: CreatePatientFormValues) => {
@@ -172,7 +176,7 @@ export default function CreatePatientPage() {
                   value={formatThaiId(field.value)}
                   onChange={(e) =>
                     field.onChange(
-                      e.target.value.replace(/\D/g, "").slice(0, 13),
+                      e.target.value.replace(/\D/g, "").slice(0, 13)
                     )
                   }
                   maxLength={17}
@@ -204,11 +208,15 @@ export default function CreatePatientPage() {
                   className={cn(
                     "w-full justify-start text-left font-normal",
                     !birthdateValue && "text-muted-foreground",
-                    errors.birthdate && "border-destructive",
+                    errors.birthdate && "border-destructive"
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {birthdateLabel ? birthdateLabel : <span>เลือกวันเกิด</span>}
+                  {birthdateLabel ? (
+                    birthdateLabel
+                  ) : (
+                    <span>เลือกวันเกิด</span>
+                  )}
                 </Button>
               </PopoverTrigger>
               <PopoverContent
@@ -220,6 +228,14 @@ export default function CreatePatientPage() {
                   selected={birthdateValue}
                   defaultMonth={birthdateValue}
                   captionLayout="dropdown"
+                  formatters={{
+                    formatCaption: (date) =>
+                      `${format(date, "LLLL", { locale: th })} ${date.getFullYear() + 543}`,
+                    formatMonthDropdown: (date) =>
+                      format(date, "LLLL", { locale: th }),
+                    formatYearDropdown: (date) =>
+                      String(date.getFullYear() + 543),
+                  }}
                   onSelect={(date) => {
                     setValue(
                       "birthdate",
@@ -227,7 +243,7 @@ export default function CreatePatientPage() {
                       {
                         shouldValidate: true,
                         shouldDirty: true,
-                      },
+                      }
                     );
                     setBirthdateOpen(false);
                   }}
@@ -260,7 +276,7 @@ export default function CreatePatientPage() {
                     id="gender"
                     className={cn(
                       "w-full",
-                      errors.gender && "border-destructive",
+                      errors.gender && "border-destructive"
                     )}
                   >
                     <SelectValue placeholder="เลือกเพศ" />
@@ -294,7 +310,7 @@ export default function CreatePatientPage() {
                   value={formatPhoneNumber(field.value)}
                   onChange={(e) =>
                     field.onChange(
-                      e.target.value.replace(/\D/g, "").slice(0, 10),
+                      e.target.value.replace(/\D/g, "").slice(0, 10)
                     )
                   }
                   maxLength={12}
@@ -329,7 +345,7 @@ export default function CreatePatientPage() {
                     id="blood_group"
                     className={cn(
                       "w-full",
-                      errors.blood_group && "border-destructive",
+                      errors.blood_group && "border-destructive"
                     )}
                   >
                     <SelectValue placeholder="เลือกหมู่เลือด" />

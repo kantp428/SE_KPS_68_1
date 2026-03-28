@@ -3,6 +3,9 @@ import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft, Edit2 } from "lucide-react";
+import { formatPhoneNumber } from "@/app/utils/formatPhoneNumber";
+import { decryptData } from "@/lib/encryption";
+import { formatThaiId } from "@/app/utils/formatThaiId";
 
 export default async function PatientProfilePage({
   params,
@@ -11,7 +14,7 @@ export default async function PatientProfilePage({
 }) {
   const { id } = await params;
   const patientId = parseInt(id, 10);
-  
+
   if (isNaN(patientId)) {
     return notFound();
   }
@@ -52,20 +55,51 @@ export default async function PatientProfilePage({
 
       <div className="grid grid-cols-1 gap-6 bg-card border rounded-lg p-6">
         <div>
-          <h2 className="text-lg font-semibold mb-4 border-b pb-2">ข้อมูลส่วนตัว</h2>
+          <h2 className="text-lg font-semibold mb-4 border-b pb-2">
+            ข้อมูลส่วนตัว
+          </h2>
           <div className="space-y-3 text-sm">
-            <p><span className="font-medium">ชื่อ-นามสกุล:</span> {patient.first_name} {patient.last_name}</p>
-            <p><span className="font-medium">เลขบัตรประชาชน:</span> {patient.thai_id}</p>
-            <p><span className="font-medium">เพศ:</span> {patient.gender === "MALE" ? "ชาย" : patient.gender === "FEMALE" ? "หญิง" : patient.gender}</p>
-            <p><span className="font-medium">วันเกิด:</span> {patient.birthdate ? new Date(patient.birthdate).toLocaleDateString("th-TH") : "-"}</p>
-            <p><span className="font-medium">เบอร์โทรศัพท์:</span> {patient.phone_number}</p>
-            <p><span className="font-medium">หมู่เลือด:</span> {patient.blood_group}</p>
-            <p><span className="font-medium">โรคประจำตัว:</span> {patient.chronic_disease || "ไม่มี"}</p>
+            <p>
+              <span className="font-medium">ชื่อ-นามสกุล:</span>{" "}
+              {patient.first_name} {patient.last_name}
+            </p>
+            <p>
+              <span className="font-medium">เลขบัตรประชาชน:</span>{" "}
+              {formatThaiId(decryptData(patient.thai_id))}
+            </p>
+            <p>
+              <span className="font-medium">เพศ:</span>{" "}
+              {patient.gender === "MALE"
+                ? "ชาย"
+                : patient.gender === "FEMALE"
+                  ? "หญิง"
+                  : patient.gender}
+            </p>
+            <p>
+              <span className="font-medium">วันเกิด:</span>{" "}
+              {patient.birthdate
+                ? new Date(patient.birthdate).toLocaleDateString("th-TH", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                  })
+                : "-"}
+            </p>
+            <p>
+              <span className="font-medium">เบอร์โทรศัพท์:</span>{" "}
+              {formatPhoneNumber(patient.phone_number)}
+            </p>
+            <p>
+              <span className="font-medium">หมู่เลือด:</span>{" "}
+              {patient.blood_group}
+            </p>
+            <p>
+              <span className="font-medium">โรคประจำตัว:</span>{" "}
+              {patient.chronic_disease || "ไม่มี"}
+            </p>
           </div>
         </div>
       </div>
-
-
     </div>
   );
 }
