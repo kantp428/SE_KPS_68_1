@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useState, type ComponentType } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useState,
+  type ComponentPropsWithoutRef,
+  type ComponentType,
+  type ElementRef,
+} from "react";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -114,18 +121,23 @@ type AccountButtonProps = {
   staffRole?: string;
 };
 
-function AccountButton({
-  isLoading,
-  fullName,
-  username,
-  role,
-  staffRole,
-}: AccountButtonProps) {
+const AccountButton = forwardRef<
+  ElementRef<typeof SidebarMenuButton>,
+  ComponentPropsWithoutRef<typeof SidebarMenuButton> & AccountButtonProps
+>(function AccountButton(
+  { isLoading, fullName, username, role, staffRole, className, ...props },
+  ref,
+) {
   return (
     <SidebarMenuButton
+      ref={ref}
       size="lg"
-      className="hover:bg-sidebar-accent transition-colors data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
       type="button"
+      className={cn(
+        "hover:bg-sidebar-accent transition-colors data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground",
+        className,
+      )}
+      {...props}
     >
       <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
         <UserCircle2Icon className="size-5" />
@@ -142,7 +154,7 @@ function AccountButton({
       <ChevronsUpDown className="ml-auto size-4 opacity-50 group-data-[state=collapsed]:hidden" />
     </SidebarMenuButton>
   );
-}
+});
 
 export function MedAssistAppSidebar() {
   const pathname = usePathname();
@@ -197,7 +209,7 @@ export function MedAssistAppSidebar() {
                   sideOffset={4}
                 >
                   <DropdownMenuItem
-                    onClick={handleLogout}
+                    onSelect={handleLogout}
                     className="cursor-pointer text-destructive focus:text-destructive"
                   >
                     <LogOut className="mr-2 size-4" />
