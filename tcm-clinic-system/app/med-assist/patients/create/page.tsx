@@ -1,162 +1,375 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { differenceInYears, format } from "date-fns";
+import { th } from "date-fns/locale";
+import { ArrowLeft, CalendarIcon, Save } from "lucide-react";
+import { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { z } from "zod";
+
+import { formatPhoneNumber } from "@/app/utils/formatPhoneNumber";
+import { formatThaiId } from "@/app/utils/formatThaiId";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import Link from "next/link";
-import { ArrowLeft, Save } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+
+const createPatientSchema = z.object({
+  first_name: z.string().min(1, "กรุณากรอกชื่อ"),
+  last_name: z.string().min(1, "กรุณากรอกนามสกุล"),
+  thai_id: z.string().length(13, "กรุณากรอกเลขบัตรประชาชน 13 หลัก"),
+  birthdate: z.string().min(1, "กรุณาเลือกวันเกิด"),
+  gender: z.enum(["MALE", "FEMALE"], {
+    message: "กรุณาเลือกเพศ",
+  }),
+  phone_number: z.string().length(10, "กรุณากรอกเบอร์โทรศัพท์ 10 หลัก"),
+  blood_group: z.enum(["A", "B", "AB", "O"], {
+    message: "กรุณาเลือกหมู่เลือด",
+  }),
+  chronic_disease: z.string().optional(),
+});
+
+type CreatePatientFormValues = z.infer<typeof createPatientSchema>;
 
 export default function CreatePatientPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    first_name: "",
-    last_name: "",
-    thai_id: "",
-    birthdate: "",
-    gender: "",
-    phone_number: "",
-    blood_group: "",
-    chronic_disease: "",
+  const [birthdateOpen, setBirthdateOpen] = useState(false);
+  const {
+    control,
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<CreatePatientFormValues>({
+    resolver: zodResolver(createPatientSchema),
+    defaultValues: {
+      first_name: "",
+      last_name: "",
+      thai_id: "",
+      birthdate: "",
+      gender: undefined,
+      phone_number: "",
+      blood_group: undefined,
+      chronic_disease: "",
+    },
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  const birthdate = watch("birthdate");
+  const birthdateValue = birthdate
+    ? new Date(`${birthdate}T00:00:00`)
+    : undefined;
+  const birthdateLabel = birthdateValue
+    ? `${format(birthdateValue, "PPP", { locale: th })} (อายุ ${differenceInYears(new Date(), birthdateValue)} ปี)`
+    : null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
+  const onSubmit = async (data: CreatePatientFormValues) => {
     try {
       const res = await fetch("/api/patients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(data),
       });
 
       if (res.ok) {
         router.push("/med-assist/patients");
-        router.refresh(); // Refresh the list page
-      } else {
-        const errorData = await res.json();
-        alert(`Failed to save: ${errorData.error || "Unknown error"}`);
+        router.refresh();
+        return;
       }
+
+      const errorData = await res.json();
+      alert(`Failed to save: ${errorData.error || "Unknown error"}`);
     } catch (err) {
       console.error(err);
       alert("Something went wrong");
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-3xl mx-auto">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
       <div className="flex items-center gap-4">
         <Link href="/med-assist/patients">
           <Button variant="outline" size="icon">
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">ลงทะเบียนคนไข้ใหม่</h1>
-          <p className="text-muted-foreground mt-1">กรอกข้อมูลพื้นฐานของคนไข้เพื่อเพิ่มเข้าสู่ระบบ</p>
+          <h1 className="text-3xl font-bold tracking-tight">
+            ลงทะเบียนคนไข้ใหม่
+          </h1>
+          <p className="mt-1 text-muted-foreground">
+            กรอกข้อมูลพื้นฐานของคนไข้เพื่อเพิ่มเข้าสู่ระบบ
+          </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="border rounded-lg bg-card p-6 space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="space-y-6 rounded-lg border bg-card p-6"
+      >
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="first_name">ชื่อ <span className="text-red-500">*</span></Label>
-            <Input id="first_name" name="first_name" required value={formData.first_name} onChange={handleChange} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="last_name">นามสกุล <span className="text-red-500">*</span></Label>
-            <Input id="last_name" name="last_name" required value={formData.last_name} onChange={handleChange} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="thai_id">เลขบัตรประชาชน <span className="text-red-500">*</span></Label>
-            <Input 
-              id="thai_id" 
-              name="thai_id" 
-              required 
-              value={formData.thai_id} 
-              onChange={handleChange} 
-              minLength={13} 
-              maxLength={13} 
-              pattern="[0-9]{13}" 
-              title="กรุณากรอกตัวเลข 13 หลัก"
-              placeholder="xxxxxxxxxxxxx"
+            <Label htmlFor="first_name">
+              ชื่อ <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="first_name"
+              disabled={isSubmitting}
+              {...register("first_name")}
+              className={errors.first_name ? "border-destructive" : ""}
             />
-            <p className="text-xs text-muted-foreground mt-1">ตัวเลข 13 หลัก</p>
+            {errors.first_name && (
+              <p className="text-xs text-destructive">
+                {errors.first_name.message}
+              </p>
+            )}
           </div>
+
           <div className="space-y-2">
-            <Label htmlFor="birthdate">วันเกิด <span className="text-red-500">*</span></Label>
-            <Input type="date" id="birthdate" name="birthdate" required value={formData.birthdate} onChange={handleChange} />
+            <Label htmlFor="last_name">
+              นามสกุล <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="last_name"
+              disabled={isSubmitting}
+              {...register("last_name")}
+              className={errors.last_name ? "border-destructive" : ""}
+            />
+            {errors.last_name && (
+              <p className="text-xs text-destructive">
+                {errors.last_name.message}
+              </p>
+            )}
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="thai_id">
+              เลขบัตรประชาชน <span className="text-red-500">*</span>
+            </Label>
+            <Controller
+              control={control}
+              name="thai_id"
+              render={({ field }) => (
+                <Input
+                  id="thai_id"
+                  disabled={isSubmitting}
+                  value={formatThaiId(field.value)}
+                  onChange={(e) =>
+                    field.onChange(
+                      e.target.value.replace(/\D/g, "").slice(0, 13),
+                    )
+                  }
+                  maxLength={17}
+                  placeholder="x-xxxx-xxxxx-xx-x"
+                  className={errors.thai_id ? "border-destructive" : ""}
+                />
+              )}
+            />
+            {errors.thai_id ? (
+              <p className="text-xs text-destructive">
+                {errors.thai_id.message}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">ตัวเลข 13 หลัก</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="birthdate">
+              วันเกิด <span className="text-red-500">*</span>
+            </Label>
+            <Popover open={birthdateOpen} onOpenChange={setBirthdateOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  id="birthdate"
+                  type="button"
+                  variant="outline"
+                  disabled={isSubmitting}
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !birthdateValue && "text-muted-foreground",
+                    errors.birthdate && "border-destructive",
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {birthdateLabel ? birthdateLabel : <span>เลือกวันเกิด</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="w-auto overflow-hidden p-0"
+                align="start"
+              >
+                <Calendar
+                  mode="single"
+                  selected={birthdateValue}
+                  defaultMonth={birthdateValue}
+                  captionLayout="dropdown"
+                  onSelect={(date) => {
+                    setValue(
+                      "birthdate",
+                      date ? format(date, "yyyy-MM-dd") : "",
+                      {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                      },
+                    );
+                    setBirthdateOpen(false);
+                  }}
+                  locale={th}
+                  disabled={(date) => date > new Date()}
+                />
+              </PopoverContent>
+            </Popover>
+            {errors.birthdate && (
+              <p className="text-xs text-destructive">
+                {errors.birthdate.message}
+              </p>
+            )}
+          </div>
+
           <div className="space-y-3">
-            <Label htmlFor="gender">เพศ <span className="text-red-500">*</span></Label>
-            <select
-              id="gender"
+            <Label htmlFor="gender">
+              เพศ <span className="text-red-500">*</span>
+            </Label>
+            <Controller
+              control={control}
               name="gender"
-              required
-              value={formData.gender}
-              onChange={handleChange}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <option value="" disabled hidden>-- กรุณาเลือกเพศ --</option>
-              <option value="MALE">ชาย (Male)</option>
-              <option value="FEMALE">หญิง (Female)</option>
-            </select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="phone_number">เบอร์โทรศัพท์ <span className="text-red-500">*</span></Label>
-            <Input 
-              type="tel" 
-              id="phone_number" 
-              name="phone_number" 
-              required 
-              value={formData.phone_number} 
-              onChange={handleChange} 
-              minLength={10} 
-              maxLength={10} 
-              pattern="[0-9]{10}"
-              title="กรุณากรอกตัวเลข 10 หลัก"
-              placeholder="08xxxxxxxx"
+              render={({ field }) => (
+                <Select
+                  value={field.value}
+                  onValueChange={(value) => field.onChange(value)}
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger
+                    id="gender"
+                    className={cn(
+                      "w-full",
+                      errors.gender && "border-destructive",
+                    )}
+                  >
+                    <SelectValue placeholder="เลือกเพศ" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="MALE">ชาย (Male)</SelectItem>
+                    <SelectItem value="FEMALE">หญิง (Female)</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             />
-              <p className="text-xs text-muted-foreground mt-1">ตัวเลข 10 หลัก</p>
+            {errors.gender && (
+              <p className="text-xs text-destructive">
+                {errors.gender.message}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="phone_number">
+              เบอร์โทรศัพท์ <span className="text-red-500">*</span>
+            </Label>
+            <Controller
+              control={control}
+              name="phone_number"
+              render={({ field }) => (
+                <Input
+                  id="phone_number"
+                  type="tel"
+                  disabled={isSubmitting}
+                  value={formatPhoneNumber(field.value)}
+                  onChange={(e) =>
+                    field.onChange(
+                      e.target.value.replace(/\D/g, "").slice(0, 10),
+                    )
+                  }
+                  maxLength={12}
+                  placeholder="099-999-9999"
+                  className={errors.phone_number ? "border-destructive" : ""}
+                />
+              )}
+            />
+            {errors.phone_number ? (
+              <p className="text-xs text-destructive">
+                {errors.phone_number.message}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">ตัวเลข 10 หลัก</p>
+            )}
           </div>
 
           <div className="space-y-3">
-            <Label htmlFor="blood_group">หมู่เลือด <span className="text-red-500">*</span></Label>
-            <select
-              id="blood_group"
+            <Label htmlFor="blood_group">
+              หมู่เลือด <span className="text-red-500">*</span>
+            </Label>
+            <Controller
+              control={control}
               name="blood_group"
-              required
-              value={formData.blood_group}
-              onChange={handleChange}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <option value="" disabled hidden>-- กรุณาเลือกหมู่เลือด --</option>
-              <option value="A">กรุ๊ป A</option>
-              <option value="B">กรุ๊ป B</option>
-              <option value="AB">กรุ๊ป AB</option>
-              <option value="O">กรุ๊ป O</option>
-            </select>
+              render={({ field }) => (
+                <Select
+                  value={field.value}
+                  onValueChange={(value) => field.onChange(value)}
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger
+                    id="blood_group"
+                    className={cn(
+                      "w-full",
+                      errors.blood_group && "border-destructive",
+                    )}
+                  >
+                    <SelectValue placeholder="เลือกหมู่เลือด" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="A">กรุ๊ป A</SelectItem>
+                    <SelectItem value="B">กรุ๊ป B</SelectItem>
+                    <SelectItem value="AB">กรุ๊ป AB</SelectItem>
+                    <SelectItem value="O">กรุ๊ป O</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.blood_group && (
+              <p className="text-xs text-destructive">
+                {errors.blood_group.message}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="chronic_disease">โรคประจำตัว <span className="text-muted-foreground text-xs font-normal">(ถ้ามี)</span></Label>
-            <Input id="chronic_disease" name="chronic_disease" value={formData.chronic_disease} onChange={handleChange} placeholder="เช่น เบาหวาน, ความดัน (หรือเว้นว่างถ้าไม่มี)" />
+            <Label htmlFor="chronic_disease">
+              โรคประจำตัว{" "}
+              <span className="text-xs font-normal text-muted-foreground">
+                (ถ้ามี)
+              </span>
+            </Label>
+            <Input
+              id="chronic_disease"
+              disabled={isSubmitting}
+              placeholder="เช่น เบาหวาน, ความดัน (หรือเว้นว่างถ้าไม่มี)"
+              {...register("chronic_disease")}
+            />
           </div>
         </div>
-        
-        <div className="flex justify-end pt-4 border-t">
-          <Button type="submit" disabled={loading} className="gap-2">
-            <Save className="w-4 h-4" />
-            {loading ? "กำลังบันทึก..." : "บันทึกข้อมูลคนไข้"}
+
+        <div className="flex justify-end border-t pt-4">
+          <Button type="submit" disabled={isSubmitting} className="gap-2">
+            <Save className="h-4 w-4" />
+            {isSubmitting ? "กำลังบันทึก..." : "บันทึกข้อมูลคนไข้"}
           </Button>
         </div>
       </form>
