@@ -1,8 +1,12 @@
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { encryptData } from "@/lib/encryption";
+
+type TransactionClient = Omit<
+    typeof prisma,
+    "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends"
+>;
 
 export async function POST(req: Request) {
     try {
@@ -56,7 +60,7 @@ export async function POST(req: Request) {
 
         // 4. Create Account and Patient in a transaction
         const result = await prisma.$transaction(
-            async (tx: Prisma.TransactionClient) => {
+            async (tx: TransactionClient) => {
             // Create account
             const newAccount = await tx.account.create({
                 data: {
