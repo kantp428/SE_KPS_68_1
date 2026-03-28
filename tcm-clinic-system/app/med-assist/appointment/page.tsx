@@ -36,7 +36,7 @@ import { format, parseISO } from "date-fns";
 import { th } from "date-fns/locale";
 import { CalendarIcon, RefreshCcw, Search, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { formatPhoneNumber } from "@/app/utils/formatPhoneNumber";
 
@@ -58,6 +58,7 @@ const MedAssistAppointmentPage = () => {
   const selectedDateParam = selectedDate
     ? format(selectedDate, "yyyy-MM-dd")
     : undefined;
+  const hasSyncedExpiredAppointments = useRef(false);
 
   const { updateAppointmentStatus, loading: updatingStatus } =
     useAppointmentStatusUpdate();
@@ -71,6 +72,40 @@ const MedAssistAppointmentPage = () => {
   );
 
   const totalPages = list?.pagination?.totalPages || 1;
+
+  useEffect(() => {
+    if (hasSyncedExpiredAppointments.current) {
+      return;
+    }
+
+    hasSyncedExpiredAppointments.current = true;
+
+    const syncExpiredAppointments = async () => {
+      try {
+        const response = await fetch("/api/med-assist/appointment", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status: "COMPLETED" }),
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const result = (await response.json()) as { updatedCount?: number };
+
+        if ((result.updatedCount ?? 0) > 0) {
+          await fetchList();
+        }
+      } catch (error) {
+        console.error("Failed to sync appointment statuses:", error);
+      }
+    };
+
+    void syncExpiredAppointments();
+  }, [fetchList]);
 
   const handleRefresh = async () => {
     try {

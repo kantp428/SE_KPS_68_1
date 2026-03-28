@@ -1,6 +1,5 @@
 import prisma from "@/lib/prisma";
 import { Prisma, service_status_enum } from "@prisma/client";
-import { Prisma, service_status_enum } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
