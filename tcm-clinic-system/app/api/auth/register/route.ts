@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { encryptData } from "@/lib/encryption";
 
@@ -54,7 +55,8 @@ export async function POST(req: Request) {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // 4. Create Account and Patient in a transaction
-        const result = await prisma.$transaction(async (tx) => {
+        const result = await prisma.$transaction(
+            async (tx: Prisma.TransactionClient) => {
             // Create account
             const newAccount = await tx.account.create({
                 data: {
@@ -90,8 +92,9 @@ export async function POST(req: Request) {
                 });
             }
 
-            return { account: newAccount, patient: updatedOrNewPatient };
-        });
+                return { account: newAccount, patient: updatedOrNewPatient };
+            },
+        );
 
         return NextResponse.json(
             { message: "ลงทะเบียนสำเร็จ", data: { id: result.account.id, username: result.account.username } },
