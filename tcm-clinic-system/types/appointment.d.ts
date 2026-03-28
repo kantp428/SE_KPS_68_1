@@ -28,6 +28,12 @@ export interface AppointmentStatusUpdateResponse {
     appointment: AppointmentData;
 }
 
+export interface BulkAppointmentStatusUpdateResponse {
+    message: string;
+    updatedCount: number;
+    affectedDate?: string;
+}
+
 export interface MedAssistAppointmentListItem {
     id: number;
     patientId: number;

@@ -1,6 +1,7 @@
 ﻿import prisma from "@/lib/prisma";
 import { appointment_status_enum } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { decryptData } from "@/lib/encryption";
 
 export async function GET(req: Request) {
   try {
@@ -59,7 +60,7 @@ export async function GET(req: Request) {
       data: patients.map((p) => ({
         value: p.id,
         label: `${p.first_name} ${p.last_name}`,
-        thaiId: p.thai_id,
+        thaiId: decryptData(p.thai_id),
         bookingAt: p.appointment[0]?.datetime ?? null,
       })),
     });

@@ -81,3 +81,72 @@ export async function GET(req: Request) {
         );
     }
 }
+
+export async function PATCH(req: Request) {
+    try {
+        const body = await req.json();
+        const { status } = body as {
+            status?: appointment_status_enum;
+        };
+
+        if (
+            !status ||
+            !Object.values(appointment_status_enum).includes(status)
+        ) {
+            return NextResponse.json(
+                { message: "Invalid appointment status" },
+                { status: 400 },
+            );
+        }
+
+        const now = new Date();
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+
+        const dayStart = new Date(
+            yesterday.getFullYear(),
+            yesterday.getMonth(),
+            yesterday.getDate(),
+            0,
+            0,
+            0,
+            0,
+        );
+        const dayEnd = new Date(
+            yesterday.getFullYear(),
+            yesterday.getMonth(),
+            yesterday.getDate(),
+            23,
+            59,
+            59,
+            999,
+        );
+
+        const result = await prisma.appointment.updateMany({
+            where: {
+                status: appointment_status_enum.CONFIRMED,
+                datetime: {
+                    lte: dayEnd,
+                },
+            },
+            data: {
+                status,
+            },
+        });
+
+        return NextResponse.json(
+            {
+                message: "Confirmed appointments from yesterday and earlier updated successfully",
+                updatedCount: result.count,
+                affectedDate: dayEnd.toISOString().slice(0, 10),
+            },
+            { status: 200 },
+        );
+    } catch (error) {
+        console.error("Error updating med-assist appointments:", error);
+        return NextResponse.json(
+            { message: "Internal server error" },
+            { status: 500 },
+        );
+    }
+}

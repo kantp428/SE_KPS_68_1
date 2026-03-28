@@ -1,6 +1,7 @@
 ﻿import prisma from "@/lib/prisma";
 import { appointment_status_enum } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { decryptData } from "@/lib/encryption";
 
 export async function GET(
   _req: Request,
@@ -66,7 +67,7 @@ export async function GET(
       data: {
         id: patient.id,
         fullName: `${patient.first_name} ${patient.last_name}`,
-        thaiId: patient.thai_id,
+        thaiId: decryptData(patient.thai_id),
         phoneNumber: patient.phone_number,
         birthdate: patient.birthdate,
         gender: patient.gender,

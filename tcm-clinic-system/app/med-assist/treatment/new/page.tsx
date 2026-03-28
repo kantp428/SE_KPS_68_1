@@ -19,12 +19,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { useAppointmentStatusUpdate } from "@/hooks/useAppointmentStatusUpdate";
 import { useDebounce } from "@/hooks/use-debounce";
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
 import { format } from "date-fns";
 import { Clock3, Lock } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -144,6 +145,15 @@ const minuteOptions = Array.from({ length: 60 }, (_, i) =>
 
 const NewTreatmentPage = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const appointmentIdParam = searchParams.get("appointmentId");
+  const patientIdParam = searchParams.get("patientId");
+  const appointmentId = appointmentIdParam ? Number(appointmentIdParam) : 0;
+  const patientIdFromQuery = patientIdParam ? Number(patientIdParam) : 0;
+  const initialPatientId =
+    Number.isInteger(patientIdFromQuery) && patientIdFromQuery > 0
+      ? patientIdFromQuery
+      : 0;
 
   const [patientSearch, setPatientSearch] = useState("");
   const [patientOptions, setPatientOptions] = useState<PatientOption[]>([]);
@@ -153,6 +163,7 @@ const NewTreatmentPage = () => {
   const [doctorOptions, setDoctorOptions] = useState<Option[]>([]);
   const [roomOptions, setRoomOptions] = useState<Option[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const { updateAppointmentStatus } = useAppointmentStatusUpdate();
 
   const debouncedPatientSearch = useDebounce(patientSearch, 300);
 
@@ -160,12 +171,13 @@ const NewTreatmentPage = () => {
     control,
     register,
     watch,
+    reset,
     handleSubmit,
     formState: { errors },
   } = useForm<FormValuesInput, unknown, FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      patientId: 0,
+      patientId: initialPatientId,
       doctorId: 0,
       roomId: 0,
       startAt: format(new Date(), "HH:mm"),
@@ -189,6 +201,17 @@ const NewTreatmentPage = () => {
     [startAt],
   );
 
+  useEffect(() => {
+    if (!Number.isInteger(patientIdFromQuery) || patientIdFromQuery <= 0) {
+      return;
+    }
+
+    reset((currentValues) => ({
+      ...currentValues,
+      patientId: patientIdFromQuery,
+    }));
+  }, [patientIdFromQuery, reset]);
+
   // ── Fetch patient options ──
   useEffect(() => {
     api
@@ -210,6 +233,26 @@ const NewTreatmentPage = () => {
       .then((r) => setPatientDetail(r.data?.data || null))
       .catch(() => setPatientDetail(null));
   }, [selectedPatientId]);
+
+  useEffect(() => {
+    if (!patientDetail) return;
+
+    setPatientOptions((prev) => {
+      if (prev.some((option) => option.value === patientDetail.id)) {
+        return prev;
+      }
+
+      return [
+        {
+          value: patientDetail.id,
+          label: patientDetail.fullName,
+          thaiId: patientDetail.thaiId,
+          bookingAt: patientDetail.bookingAt,
+        },
+        ...prev,
+      ];
+    });
+  }, [patientDetail]);
 
   // ── Fetch doctor options (by time) ──
   useEffect(() => {
@@ -257,6 +300,10 @@ const NewTreatmentPage = () => {
           },
         },
       });
+
+      if (Number.isInteger(appointmentId) && appointmentId > 0) {
+        await updateAppointmentStatus(appointmentId, "COMPLETED");
+      }
 
       toast.success("สร้างข้อมูลการบำบัดสำเร็จ");
       router.push("/med-assist/treatment");
