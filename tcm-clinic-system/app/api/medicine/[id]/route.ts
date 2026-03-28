@@ -2,13 +2,17 @@ import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Internal server error";
+}
+
 // [GET BY ID] - ดึงข้อมูลยาตัวเดียว
 export async function GET(
   req: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const medicine = await (prisma as any).medicine.findUnique({
+    const medicine = await prisma.medicine.findUnique({
       where: { id: parseInt(params.id) },
     });
 
@@ -17,8 +21,8 @@ export async function GET(
     }
 
     return NextResponse.json(medicine);
-  } catch (error: any) {
-    return NextResponse.json({ message: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ message: getErrorMessage(error) }, { status: 500 });
   }
 }
 
@@ -31,7 +35,7 @@ export async function PUT(
     const body = await req.json();
     const { name, description, price, status } = body;
 
-    const updatedMedicine = await (prisma as any).medicine.update({
+    const updatedMedicine = await prisma.medicine.update({
       where: { id: parseInt(params.id) },
       data: {
         name,
@@ -42,7 +46,7 @@ export async function PUT(
     });
 
     return NextResponse.json(updatedMedicine);
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json({ message: "แก้ไขข้อมูลไม่สำเร็จ" }, { status: 500 });
   }
 }
@@ -53,12 +57,12 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    await (prisma as any).medicine.delete({
+    await prisma.medicine.delete({
       where: { id: parseInt(params.id) },
     });
 
     return NextResponse.json({ message: "ลบข้อมูลสำเร็จ" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json({ message: "ลบข้อมูลไม่สำเร็จ" }, { status: 500 });
   }
 }

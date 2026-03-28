@@ -1,77 +1,100 @@
 import prisma from "@/lib/prisma";
-import { Prisma, service_status_enum } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 
-// [GET ALL]
-export async function GET(req: Request) {
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
-    const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
-    const name = searchParams.get("name");
-    const status = searchParams.get("status");
+    const { id } = await params;
 
-    const skip = (page - 1) * limit;
-    const where: Prisma.serviceWhereInput = {};
-
-    if (name) where.name = { contains: name, mode: "insensitive" };
-    if (status) where.status = status as service_status_enum;
-
-    const [services, total] = await Promise.all([
-      prisma.service.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { name: "asc" },
-      }),
-      prisma.service.count({ where }),
-    ]);
-
-    return NextResponse.json({
-      data: services,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
+    const service = await prisma.service.findUnique({
+      where: { id: Number(id) },
     });
-  } catch (error) {
-    console.error(error);
+
+    if (!service) {
+      return NextResponse.json(
+        { message: "ไม่พบข้อมูลบริการที่ระบุ" },
+        { status: 404 },
+      );
+    }
+
+    return NextResponse.json(service);
+  } catch {
     return NextResponse.json(
-      { message: String(error) },
-      { status: 500 }
+      { message: "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์" },
+      { status: 500 },
     );
   }
 }
 
-// [CREATE]
-export async function POST(req: Request) {
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
-    const { name, price, duration_minute, status } = await req.json();
+    const { id } = await params;
+    const body = await req.json();
+    const { name, price, duration_minute, status } = body;
 
-    if (!name || price === undefined || !duration_minute) {
-      return NextResponse.json(
-        { message: "กรุณากรอกข้อมูลให้ครบถ้วน" },
-        { status: 400 }
-      );
-    }
-
-    const newService = await prisma.service.create({
+    const updatedService = await prisma.service.update({
+      where: { id: Number(id) },
       data: {
-        name,
-        price,
-        duration_minute,
-        status: status || "AVAILABLE",
+        ...(name && { name }),
+        ...(price !== undefined && { price }),
+        ...(duration_minute !== undefined && { duration_minute }),
+        ...(status && { status }),
       },
     });
 
-    return NextResponse.json(newService, { status: 201 });
+    return NextResponse.json(updatedService);
   } catch (error) {
-    console.error(error);
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2025"
+    ) {
+      return NextResponse.json(
+        { message: "ไม่พบบริการที่ต้องการแก้ไข" },
+        { status: 404 },
+      );
+    }
+
     return NextResponse.json(
-      { message: String(error) },
-      { status: 500 }
+      { message: "เกิดข้อผิดพลาดในการอัปเดตข้อมูล" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { id } = await params;
+
+    await prisma.service.delete({
+      where: { id: Number(id) },
+    });
+
+    return NextResponse.json({
+      message: "ลบข้อมูลบริการเรียบร้อยแล้ว",
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2003"
+    ) {
+      return NextResponse.json(
+        { message: "ไม่สามารถลบได้ เนื่องจากบริการนี้ถูกใช้งานในข้อมูลอื่นอยู่" },
+        { status: 400 },
+      );
+    }
+
+    return NextResponse.json(
+      { message: "เกิดข้อผิดพลาดในการลบข้อมูล" },
+      { status: 500 },
     );
   }
 }

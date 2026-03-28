@@ -1,6 +1,10 @@
 import prisma from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { Prisma, medicine_status_enum } from "@prisma/client";
 import { NextResponse } from "next/server";
+
+function isMedicineStatus(value: string): value is medicine_status_enum {
+  return value === "AVAILABLE" || value === "UNAVAILABLE";
+}
 
 // [GET ALL] - ดึงข้อมูลยาพร้อมระบบ Search และ Pagination
 export async function GET(req: Request) {
@@ -12,26 +16,27 @@ export async function GET(req: Request) {
     const status = searchParams.get("status");
 
     const skip = (page - 1) * limit;
-
-    // ใช้ any เพื่อเลี่ยงปัญหา TS หา Property 'status' หรือ Enum ไม่เจอ
-    const where: any = {};
+    const where: Prisma.medicineWhereInput = {};
 
     if (name) {
-      where.name = { contains: name, mode: "insensitive" };
+      where.name = {
+        contains: name,
+        mode: Prisma.QueryMode.insensitive,
+      };
     }
 
-    if (status) {
+    if (status && isMedicineStatus(status)) {
       where.status = status;
     }
 
     const [medicines, total] = await Promise.all([
-      (prisma.medicine as any).findMany({
+      prisma.medicine.findMany({
         where,
         skip,
         take: limit,
         orderBy: { id: "asc" },
       }),
-      (prisma.medicine as any).count({ where }),
+      prisma.medicine.count({ where }),
     ]);
 
     return NextResponse.json({
@@ -66,14 +71,13 @@ export async function POST(req: Request) {
       );
     }
 
-    // สร้างข้อมูลโดยใช้ Type Casting เพื่อหลบ Error ของ Prisma Client ที่ยังไม่อัปเดต
-    const newMedicine = await (prisma.medicine as any).create({
+    const newMedicine = await prisma.medicine.create({
       data: {
         name,
         description: description || null,
         // แปลงเป็น Decimal เพื่อรองรับ numeric(10,2) ในฐานข้อมูล
         price: new Prisma.Decimal(price),
-        status: status || "AVAILABLE",
+        status: isMedicineStatus(status) ? status : medicine_status_enum.AVAILABLE,
       },
     });
 

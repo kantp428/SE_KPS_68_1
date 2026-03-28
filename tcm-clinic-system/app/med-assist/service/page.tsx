@@ -1,4 +1,5 @@
 "use client";
+
 import { handleException } from "@/app/utils/handleException";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -33,13 +34,11 @@ const ServicePage = () => {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [limit] = useState(10);
-
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
   const [tempName, setTempName] = useState("");
-
   const [nameSearch, setNameSearch] = useState("");
-  const debouncedNameSearch = useDebounce(nameSearch, 500);
 
+  const debouncedNameSearch = useDebounce(nameSearch, 500);
   const { list, loading, fetchList, deleteService } = useService(
     currentPage,
     limit,
@@ -49,19 +48,23 @@ const ServicePage = () => {
   const totalPages = list?.pagination?.totalPages || 1;
 
   function statusThaiFormat(status: string) {
-    return status === "AVAILABLE" ? "เปิดใช้งาน" : "ปิดใช้งาน";
+    if (status === "AVAILABLE") {
+      return "เปิดใช้งาน";
+    }
+
+    return "ปิดใช้งาน";
   }
 
   const handleDelete = async (id: number) => {
     try {
       await deleteService(id);
-      toast.success("ปิดการใช้งานสำเร็จ", {
-        description: "ปิดการใช้งานบริการเรียบร้อยแล้ว",
+      toast.success("ลบข้อมูลสำเร็จ", {
+        description: "ข้อมูลบริการถูกลบเรียบร้อยแล้ว",
       });
       fetchList();
     } catch (e: unknown) {
       const errorMessage = handleException(e, "เกิดข้อผิดพลาด");
-      toast.error("ปิดการใช้งานไม่สำเร็จ", {
+      toast.error("ลบข้อมูลไม่สำเร็จ", {
         description: errorMessage,
       });
     }
@@ -74,16 +77,16 @@ const ServicePage = () => {
       </h1>
 
       <div className="flex items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative max-w-sm flex-1">
           <Input
             placeholder="ค้นหาชื่อบริการ..."
             value={nameSearch}
             onChange={(e) => setNameSearch(e.target.value)}
-            className="h-10 focus-visible:ring-1 transition-all"
+            className="h-10 transition-all focus-visible:ring-1"
           />
         </div>
 
-        <Button onClick={() => router.push("/staff/service/new")}>
+        <Button onClick={() => router.push("/med-assist/service/new")}>
           + เพิ่มบริการใหม่
         </Button>
       </div>
@@ -93,16 +96,16 @@ const ServicePage = () => {
           <TableHeader>
             <TableRow className="bg-muted/50">
               <TableHead className="min-w-30">ชื่อบริการ</TableHead>
-              <TableHead className="hidden sm:table-cell text-center">
+              <TableHead className="hidden text-center sm:table-cell">
                 ราคา (บาท)
               </TableHead>
-              <TableHead className="hidden sm:table-cell text-center">
+              <TableHead className="hidden text-center sm:table-cell">
                 ระยะเวลา (นาที)
               </TableHead>
-              <TableHead className="hidden sm:table-cell w-50 text-center">
+              <TableHead className="hidden w-50 text-center sm:table-cell">
                 สถานะ
               </TableHead>
-              <TableHead className="w-20 sm:w-25 text-center">จัดการ</TableHead>
+              <TableHead className="w-20 text-center sm:w-25">จัดการ</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -113,10 +116,10 @@ const ServicePage = () => {
                     <Skeleton className="h-5 w-37.5 bg-muted" />
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
-                    <Skeleton className="h-5 w-20 bg-muted mx-auto" />
+                    <Skeleton className="mx-auto h-5 w-20 bg-muted" />
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
-                    <Skeleton className="h-5 w-20 bg-muted mx-auto" />
+                    <Skeleton className="mx-auto h-5 w-20 bg-muted" />
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
                     <div className="flex justify-center">
@@ -135,53 +138,57 @@ const ServicePage = () => {
               <TableRow>
                 <TableCell
                   colSpan={5}
-                  className="text-center py-10 text-muted-foreground"
+                  className="py-10 text-center text-muted-foreground"
                 >
                   ไม่พบข้อมูลบริการ
                 </TableCell>
               </TableRow>
             ) : (
-              list?.data.map((l) => (
-                <TableRow key={l.id}>
-                  <TableCell>{l.name}</TableCell>
-                  <TableCell className="hidden sm:table-cell text-center">
-                    {parseFloat(l.price).toLocaleString("th-TH", {
+              list?.data.map((service) => (
+                <TableRow key={service.id}>
+                  <TableCell>{service.name}</TableCell>
+                  <TableCell className="hidden text-center sm:table-cell">
+                    {parseFloat(service.price).toLocaleString("th-TH", {
                       minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
                     })}
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell text-center">
-                    {l.duration_minute}
+                  <TableCell className="hidden text-center sm:table-cell">
+                    {service.duration_minute}
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell text-center">
+                  <TableCell className="hidden text-center sm:table-cell">
                     <div
                       className={cn(
-                        "inline-flex px-3 py-1 rounded-full text-xs border",
-                        l.status === "AVAILABLE"
+                        "inline-flex rounded-full border px-3 py-1 text-xs",
+                        service.status === "AVAILABLE"
                           ? "border-green-600 bg-green-50 text-green-700"
                           : "border-red-600 bg-red-50 text-red-700",
                       )}
                     >
-                      {statusThaiFormat(l.status)}
+                      {statusThaiFormat(service.status)}
                     </div>
                   </TableCell>
                   <TableCell className="text-center">
                     <Button
                       size="icon"
                       variant="ghost"
-                      onClick={() => router.push(`/staff/service/${l.id}`)}
+                      onClick={() =>
+                        router.push(`/med-assist/service/${service.id}`)
+                      }
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Pencil className="h-4 w-4" />
                     </Button>
+
                     <Button
                       size="icon"
                       variant="ghost"
                       className="text-destructive"
                       onClick={() => {
-                        setDeleteTargetId(l.id);
-                        setTempName(l.name);
+                        setDeleteTargetId(service.id);
+                        setTempName(service.name);
                       }}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -191,13 +198,13 @@ const ServicePage = () => {
         </Table>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2 w-full">
-        <p className="text-xs text-muted-foreground font-medium">
-          หน้า {currentPage} จาก {totalPages} (รวม{" "}
-          {list?.pagination?.total || 0} รายการ)
+      <div className="flex w-full flex-col items-center justify-between gap-4 px-2 sm:flex-row">
+        <p className="text-xs font-medium text-muted-foreground">
+          หน้า {currentPage} จาก {totalPages} (รวม {list?.pagination?.total || 0}{" "}
+          รายการ)
         </p>
 
-        <div className="w-full sm:w-auto flex justify-center">
+        <div className="flex w-full justify-center sm:w-auto">
           <Pagination>
             <PaginationContent>
               <PaginationItem>
@@ -210,18 +217,16 @@ const ServicePage = () => {
                 />
               </PaginationItem>
 
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                (num) => (
-                  <PaginationItem key={num} className="cursor-pointer">
-                    <PaginationLink
-                      isActive={currentPage === num}
-                      onClick={() => setCurrentPage(num)}
-                    >
-                      {num}
-                    </PaginationLink>
-                  </PaginationItem>
-                ),
-              )}
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
+                <PaginationItem key={num} className="cursor-pointer">
+                  <PaginationLink
+                    isActive={currentPage === num}
+                    onClick={() => setCurrentPage(num)}
+                  >
+                    {num}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
 
               <PaginationItem>
                 <PaginationNext
@@ -243,9 +248,9 @@ const ServicePage = () => {
             onOpenChange={(open) => {
               if (!open) setDeleteTargetId(null);
             }}
-            title="ยืนยันการปิดการใช้งาน?"
-            description={`คุณต้องการปิดการใช้งานบริการ "${tempName ?? ""}" ใช่หรือไม่?`}
-            confirmText="ปิดการใช้งาน"
+            title="ยืนยันการลบข้อมูล?"
+            description={`คุณต้องการลบบริการ "${tempName ?? ""}" ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้`}
+            confirmText="ลบข้อมูล"
             isDestructive={true}
             onConfirm={() => {
               if (deleteTargetId) {
