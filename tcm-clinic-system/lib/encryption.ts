@@ -2,10 +2,20 @@ import crypto from "crypto";
 
 // ในการใช้งานจริง ควรเก็บค่าเหล่านี้ไว้ในไฟล์ .env และห้ามเปิดเผย!
 // ENCRYPTION_KEY ต้องมีขนาด 32 bytes และ IV ต้องมีขนาด 16 bytes
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || "12345678123456781234567812345678";
-const IV = process.env.ENCRYPTION_IV || "1234567812345678";
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY?.trim() || "";
+const IV = process.env.ENCRYPTION_IV?.trim() || "";
 const ALGORITHM = "aes-256-cbc";
 
+if (!ENCRYPTION_KEY || !IV) {
+    throw new Error("Missing ENCRYPTION_KEY or ENCRYPTION_IV in environment variables");
+}
+
+if (Buffer.from(ENCRYPTION_KEY).length !== 32) {
+    console.warn("ENCRYPTION_KEY must be exactly 32 bytes. Current length:", Buffer.from(ENCRYPTION_KEY).length);
+}
+if (Buffer.from(IV).length !== 16) {
+    console.warn("ENCRYPTION_IV must be exactly 16 bytes. Current length:", Buffer.from(IV).length);
+}
 /**
  * เข้ารหัสข้อมูล (Encrypt) ให้กลายเป็นข้อความที่อ่านไม่ออก
  */
