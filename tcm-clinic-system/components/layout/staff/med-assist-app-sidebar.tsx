@@ -58,10 +58,13 @@ const items = [
   { title: "หน้าหลัก", url: "/med-assist", icon: Home },
   { title: "จอง", url: "/med-assist/appointment", icon: Calendar },
   {
-    title: "การบำบัด", url: "/med-assist/treatment", icon: Cross, children: [
+    title: "การบำบัด",
+    url: "/med-assist/treatment",
+    icon: Cross,
+    children: [
       { title: "รายการการบำบัด", url: "/med-assist/treatment" },
       { title: "เพิ่มการบำบัด", url: "/med-assist/treatment/new" },
-    ]
+    ],
   },
   { title: "การชำระเงิน", url: "/med-assist/payment", icon: ReceiptText },
   { title: "ตารางงาน", url: "/med-assist/schedule", icon: CalendarDays },
@@ -107,9 +110,11 @@ export function MedAssistAppSidebar() {
 
               <div className="grid flex-1 text-left text-sm leading-tight group-data-[state=collapsed]:hidden">
                 <span className="truncate font-semibold">
-                  {isLoading ? "กำลังโหลด..." : (user?.fullName || user?.username || "Guest")}
+                  {isLoading
+                    ? "กำลังโหลด..."
+                    : user?.fullName || user?.username || "Guest"}
                 </span>
-                <span className="truncate text-xs text-white/70">
+                <span className="truncate text-xs">
                   {user?.staffRole || user?.role || "ผู้ใช้งาน"}
                 </span>
               </div>

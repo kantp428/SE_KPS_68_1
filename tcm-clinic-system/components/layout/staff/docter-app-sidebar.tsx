@@ -55,7 +55,9 @@ export function DoctorAppSidebar() {
 
               <div className="grid flex-1 text-left text-sm leading-tight group-data-[state=collapsed]:hidden">
                 <span className="truncate font-semibold">
-                  {isLoading ? "กำลังโหลด..." : (user?.fullName || user?.username || "Guest")}
+                  {isLoading
+                    ? "กำลังโหลด..."
+                    : user?.fullName || user?.username || "Guest"}
                 </span>
                 <span className="truncate text-xs">
                   {user?.staffRole || user?.role || "ผู้ใช้งาน"}

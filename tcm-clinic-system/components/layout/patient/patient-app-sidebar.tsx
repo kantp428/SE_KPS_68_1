@@ -26,8 +26,6 @@ const userSign = {
   label: "Application",
 };
 
-
-
 const items = [
   { title: "หน้าหลัก", url: "/patient", icon: Home },
   { title: "ข้อมูลส่วนตัว", url: "/patient/profile", icon: UserCircle2Icon },
@@ -52,9 +50,11 @@ export function PatientAppSidebar() {
 
               <div className="grid flex-1 text-left text-sm leading-tight group-data-[state=collapsed]:hidden">
                 <span className="truncate font-semibold">
-                  {isLoading ? "กำลังโหลด..." : (user?.fullName || user?.username || "Guest")}
+                  {isLoading
+                    ? "กำลังโหลด..."
+                    : user?.fullName || user?.username || "Guest"}
                 </span>
-                <span className="truncate text-xs text-white/70">
+                <span className="truncate text-x">
                   {user?.role || "ผู้ใช้งาน"}
                 </span>
               </div>
