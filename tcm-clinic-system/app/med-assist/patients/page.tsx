@@ -31,11 +31,7 @@ export default function PatientsListPage() {
   const [nameSearch, setNameSearch] = useState("");
   const debouncedNameSearch = useDebounce(nameSearch, 500);
 
-  const { list, loading } = usePatient(
-    currentPage,
-    limit,
-    debouncedNameSearch
-  );
+  const { list, loading } = usePatient(currentPage, limit, debouncedNameSearch);
 
   const totalPages = list?.pagination?.totalPages || 1;
 
@@ -58,9 +54,9 @@ export default function PatientsListPage() {
 
       <div className="flex items-center space-x-2">
         <div className="relative flex w-full max-w-sm items-center space-x-2">
-          <Input 
-            type="search" 
-            placeholder="ค้นหาด้วยชื่อ นามสกุล หรือเลขบัตรประชาชน..." 
+          <Input
+            type="search"
+            placeholder="ค้นหาด้วยชื่อ นามสกุล หรือเลขบัตรประชาชน..."
             value={nameSearch}
             onChange={(e) => {
               setNameSearch(e.target.value);
@@ -88,13 +84,27 @@ export default function PatientsListPage() {
             {loading ? (
               Array.from({ length: 5 }).map((_, index) => (
                 <TableRow key={index}>
-                  <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-12" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-32" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-24" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-24" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-16" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-24" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-12" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-20" />
+                  </TableCell>
                   <TableCell className="text-right">
                     <Skeleton className="h-8 w-24 ml-auto" />
                   </TableCell>
@@ -102,7 +112,10 @@ export default function PatientsListPage() {
               ))
             ) : list?.data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableCell
+                  colSpan={8}
+                  className="text-center py-8 text-muted-foreground"
+                >
                   ยังไม่มีข้อมูลคนไข้ในระบบ
                 </TableCell>
               </TableRow>
@@ -114,17 +127,27 @@ export default function PatientsListPage() {
                   </TableCell>
                   <TableCell>{patient.thai_id}</TableCell>
                   <TableCell>
-                    {patient.birthdate ? new Date(patient.birthdate).toLocaleDateString("th-TH") : "-"}
+                    {patient.birthdate
+                      ? new Date(patient.birthdate).toLocaleDateString("th-TH")
+                      : "-"}
                   </TableCell>
                   <TableCell>
-                    {patient.gender === "MALE" ? "ชาย" : patient.gender === "FEMALE" ? "หญิง" : patient.gender}
+                    {patient.gender === "MALE"
+                      ? "ชาย"
+                      : patient.gender === "FEMALE"
+                        ? "หญิง"
+                        : patient.gender}
                   </TableCell>
                   <TableCell>{patient.phone_number}</TableCell>
                   <TableCell>{patient.blood_group}</TableCell>
                   <TableCell>{patient.chronic_disease || "ไม่มี"}</TableCell>
                   <TableCell className="text-right">
                     <Link href={`/med-assist/patients/${patient.id}/edit`}>
-                      <Button variant="outline" size="sm" className="flex items-center gap-2 ml-auto">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2 ml-auto"
+                      >
                         <Edit2 className="w-4 h-4" />
                         แก้ไขข้อมูล
                       </Button>
@@ -140,7 +163,8 @@ export default function PatientsListPage() {
       {!loading && list?.data && list.data.length > 0 && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2 w-full mt-4">
           <p className="text-xs text-muted-foreground font-medium">
-            หน้า {currentPage} จาก {totalPages} (รวม {list?.pagination?.total || 0} รายการ)
+            หน้า {currentPage} จาก {totalPages} (รวม{" "}
+            {list?.pagination?.total || 0} รายการ)
           </p>
 
           <div className="w-full sm:w-auto flex justify-center">
@@ -150,30 +174,35 @@ export default function PatientsListPage() {
                   <PaginationPrevious
                     className={cn(
                       "cursor-pointer",
-                      currentPage === 1 && "pointer-events-none opacity-40"
+                      currentPage === 1 && "pointer-events-none opacity-40",
                     )}
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   />
                 </PaginationItem>
 
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
-                  <PaginationItem key={num} className="cursor-pointer">
-                    <PaginationLink
-                      isActive={currentPage === num}
-                      onClick={() => setCurrentPage(num)}
-                    >
-                      {num}
-                    </PaginationLink>
-                  </PaginationItem>
-                ))}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (num) => (
+                    <PaginationItem key={num} className="cursor-pointer">
+                      <PaginationLink
+                        isActive={currentPage === num}
+                        onClick={() => setCurrentPage(num)}
+                      >
+                        {num}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ),
+                )}
 
                 <PaginationItem>
                   <PaginationNext
                     className={cn(
                       "cursor-pointer",
-                      currentPage === totalPages && "pointer-events-none opacity-40"
+                      currentPage === totalPages &&
+                        "pointer-events-none opacity-40",
                     )}
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    onClick={() =>
+                      setCurrentPage((p) => Math.min(totalPages, p + 1))
+                    }
                   />
                 </PaginationItem>
               </PaginationContent>

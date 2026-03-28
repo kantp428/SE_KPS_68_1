@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { decryptData } from "@/lib/encryption";
 import prisma from "@/lib/prisma";
 
 export async function GET(request: Request) {
@@ -30,7 +31,10 @@ export async function GET(request: Request) {
     ]);
 
     return NextResponse.json({
-      data: patients,
+      data: patients.map((patient) => ({
+        ...patient,
+        thai_id: decryptData(patient.thai_id),
+      })),
       pagination: {
         total,
         page,
