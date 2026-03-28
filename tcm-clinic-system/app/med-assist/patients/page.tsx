@@ -24,6 +24,9 @@ import { UserPlus, Edit2 } from "lucide-react";
 import { usePatient } from "@/hooks/usePatient";
 import { useDebounce } from "@/hooks/use-debounce";
 import { cn } from "@/lib/utils";
+import { formatThaiId } from "@/app/utils/formatThaiId";
+import { formatPhoneNumber } from "@/app/utils/formatPhoneNumber";
+import { Badge } from "@/components/ui/badge";
 
 export default function PatientsListPage() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -71,13 +74,13 @@ export default function PatientsListPage() {
           <TableHeader>
             <TableRow>
               <TableHead>ชื่อ-นามสกุล</TableHead>
-              <TableHead>เลขบัตรประชาชน</TableHead>
-              <TableHead>วันเกิด</TableHead>
-              <TableHead>เพศ</TableHead>
-              <TableHead>เบอร์โทรศัพท์</TableHead>
-              <TableHead>หมู่เลือด</TableHead>
+              <TableHead className="text-center">เลขบัตรประชาชน</TableHead>
+              <TableHead className="text-center">เพศ</TableHead>
+              <TableHead className="text-center">วันเกิด</TableHead>
+              <TableHead className="text-center">เบอร์โทรศัพท์</TableHead>
+              <TableHead className="text-center">หมู่เลือด</TableHead>
               <TableHead>โรคประจำตัว</TableHead>
-              <TableHead className="text-right">จัดการ</TableHead>
+              <TableHead className="text-center">จัดการ</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -125,23 +128,62 @@ export default function PatientsListPage() {
                   <TableCell className="font-medium">
                     {patient.first_name} {patient.last_name}
                   </TableCell>
-                  <TableCell>{patient.thai_id}</TableCell>
-                  <TableCell>
+                  <TableCell className="text-center font-mono">
+                    {formatThaiId(patient.thai_id)}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "w-10",
+                        patient.gender === "MALE" &&
+                          "border-blue-600 text-blue-600",
+                        patient.gender === "FEMALE" &&
+                          "border-red-600 text-red-600",
+                      )}
+                    >
+                      {patient.gender === "MALE"
+                        ? "ชาย"
+                        : patient.gender === "FEMALE"
+                          ? "หญิง"
+                          : patient.gender}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center font-mono">
                     {patient.birthdate
-                      ? new Date(patient.birthdate).toLocaleDateString("th-TH")
+                      ? new Date(patient.birthdate).toLocaleDateString(
+                          "th-TH",
+                          {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                          },
+                        )
                       : "-"}
                   </TableCell>
-                  <TableCell>
-                    {patient.gender === "MALE"
-                      ? "ชาย"
-                      : patient.gender === "FEMALE"
-                        ? "หญิง"
-                        : patient.gender}
+                  <TableCell className="text-center font-mono">
+                    {formatPhoneNumber(patient.phone_number)}
                   </TableCell>
-                  <TableCell>{patient.phone_number}</TableCell>
-                  <TableCell>{patient.blood_group}</TableCell>
+                  <TableCell className="text-center">
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "min-w-10 justify-center",
+                        patient.blood_group === "A" &&
+                          "border-amber-600 text-amber-600",
+                        patient.blood_group === "B" &&
+                          "border-cyan-600 text-cyan-600",
+                        patient.blood_group === "AB" &&
+                          "border-purple-600 text-purple-600",
+                        patient.blood_group === "O" &&
+                          "border-green-600 text-green-600",
+                      )}
+                    >
+                      {patient.blood_group}
+                    </Badge>
+                  </TableCell>
                   <TableCell>{patient.chronic_disease || "ไม่มี"}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="center">
                     <Link href={`/med-assist/patients/${patient.id}/edit`}>
                       <Button
                         variant="outline"

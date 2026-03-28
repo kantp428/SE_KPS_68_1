@@ -1,6 +1,8 @@
 ﻿"use client";
 
+import { formatThaiId } from "@/app/utils/formatThaiId";
 import { handleException } from "@/app/utils/handleException";
+import { Badge } from "@/components/ui/badge";
 import { BreadcrumbCustom } from "@/components/ui/breadcrum-custom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,9 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { useAppointmentStatusUpdate } from "@/hooks/useAppointmentStatusUpdate";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useAppointmentStatusUpdate } from "@/hooks/useAppointmentStatusUpdate";
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
 import { format } from "date-fns";
@@ -365,7 +366,11 @@ const NewTreatmentPage = () => {
                         <SelectContent>
                           {patientOptions.map((o) => (
                             <SelectItem key={o.value} value={String(o.value)}>
-                              {o.label} | {o.thaiId}
+                              <span className="font-mono">
+                                {formatThaiId(o.thaiId)}
+                              </span>
+                              <span>|</span>
+                              <span>{o.label}</span>
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -396,7 +401,9 @@ const NewTreatmentPage = () => {
                       <p className="text-xs text-muted-foreground">
                         เลขบัตรประชาชน
                       </p>
-                      <p className="font-medium">{patientDetail.thaiId}</p>
+                      <p className="font-medium">
+                        {formatThaiId(patientDetail.thaiId)}
+                      </p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">อายุ</p>
