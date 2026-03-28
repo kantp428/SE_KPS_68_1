@@ -16,8 +16,10 @@ export default function CreatePatientPage() {
     last_name: "",
     thai_id: "",
     birthdate: "",
-    gender: "MALE",
+    gender: "",
     phone_number: "",
+    blood_group: "",
+    chronic_disease: "",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -76,13 +78,25 @@ export default function CreatePatientPage() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="thai_id">เลขบัตรประชาชน <span className="text-red-500">*</span></Label>
-            <Input id="thai_id" name="thai_id" required value={formData.thai_id} onChange={handleChange} />
+            <Input 
+              id="thai_id" 
+              name="thai_id" 
+              required 
+              value={formData.thai_id} 
+              onChange={handleChange} 
+              minLength={13} 
+              maxLength={13} 
+              pattern="[0-9]{13}" 
+              title="กรุณากรอกตัวเลข 13 หลัก"
+              placeholder="xxxxxxxxxxxxx"
+            />
+            <p className="text-xs text-muted-foreground mt-1">ตัวเลข 13 หลัก</p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="birthdate">วันเกิด <span className="text-red-500">*</span></Label>
             <Input type="date" id="birthdate" name="birthdate" required value={formData.birthdate} onChange={handleChange} />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label htmlFor="gender">เพศ <span className="text-red-500">*</span></Label>
             <select
               id="gender"
@@ -92,13 +106,50 @@ export default function CreatePatientPage() {
               onChange={handleChange}
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
             >
+              <option value="" disabled hidden>-- กรุณาเลือกเพศ --</option>
               <option value="MALE">ชาย (Male)</option>
               <option value="FEMALE">หญิง (Female)</option>
             </select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="phone_number">เบอร์โทรศัพท์ <span className="text-red-500">*</span></Label>
-            <Input type="tel" id="phone_number" name="phone_number" required value={formData.phone_number} onChange={handleChange} />
+            <Input 
+              type="tel" 
+              id="phone_number" 
+              name="phone_number" 
+              required 
+              value={formData.phone_number} 
+              onChange={handleChange} 
+              minLength={10} 
+              maxLength={10} 
+              pattern="[0-9]{10}"
+              title="กรุณากรอกตัวเลข 10 หลัก"
+              placeholder="08xxxxxxxx"
+            />
+              <p className="text-xs text-muted-foreground mt-1">ตัวเลข 10 หลัก</p>
+          </div>
+
+          <div className="space-y-3">
+            <Label htmlFor="blood_group">หมู่เลือด <span className="text-red-500">*</span></Label>
+            <select
+              id="blood_group"
+              name="blood_group"
+              required
+              value={formData.blood_group}
+              onChange={handleChange}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="" disabled hidden>-- กรุณาเลือกหมู่เลือด --</option>
+              <option value="A">กรุ๊ป A</option>
+              <option value="B">กรุ๊ป B</option>
+              <option value="AB">กรุ๊ป AB</option>
+              <option value="O">กรุ๊ป O</option>
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="chronic_disease">โรคประจำตัว <span className="text-muted-foreground text-xs font-normal">(ถ้ามี)</span></Label>
+            <Input id="chronic_disease" name="chronic_disease" value={formData.chronic_disease} onChange={handleChange} placeholder="เช่น เบาหวาน, ความดัน (หรือเว้นว่างถ้าไม่มี)" />
           </div>
         </div>
         

@@ -40,22 +40,14 @@ export default function PatientsListPage() {
 
   return (
     <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">รายชื่อคนไข้</h1>
-          <p className="text-muted-foreground mt-2">
-            จัดการข้อมูลพื้นฐานและประวัติการรักษาของคนไข้ทั้งหมด
-          </p>
-        </div>
-        <Link href="/med-assist/patients/create">
-          <Button className="flex items-center gap-2">
-            <UserPlus className="w-4 h-4" />
-            ลงทะเบียนคนไข้ใหม่
-          </Button>
-        </Link>
+      <div className="flex flex-col justify-between items-start gap-1">
+        <h1 className="text-3xl font-bold tracking-tight">รายชื่อคนไข้</h1>
+        <p className="text-muted-foreground">
+          จัดการข้อมูลพื้นฐานและประวัติการรักษาของคนไข้ทั้งหมด
+        </p>
       </div>
 
-      <div className="flex items-center space-x-2">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 sm:mt-0">
         <div className="relative flex w-full max-w-sm items-center space-x-2">
           <Input
             type="search"
@@ -67,6 +59,12 @@ export default function PatientsListPage() {
             }}
           />
         </div>
+        <Link href="/med-assist/patients/create">
+          <Button className="gap-2 shrink-0">
+            <UserPlus className="w-4 h-4" />
+            <span>ลงทะเบียนคนไข้ใหม่</span>
+          </Button>
+        </Link>
       </div>
 
       <div className="border rounded-lg bg-card">

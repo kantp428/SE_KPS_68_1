@@ -116,7 +116,19 @@ export default function EditPatientPage({
           </div>
           <div className="space-y-2">
             <Label htmlFor="thai_id">เลขบัตรประชาชน <span className="text-red-500">*</span></Label>
-            <Input id="thai_id" name="thai_id" required value={formData.thai_id} onChange={handleChange} />
+            <Input 
+              id="thai_id" 
+              name="thai_id" 
+              required 
+              value={formData.thai_id} 
+              onChange={handleChange} 
+              minLength={13} 
+              maxLength={13} 
+              pattern="[0-9]{13}" 
+              title="กรุณากรอกตัวเลข 13 หลัก"
+              placeholder="xxxxxxxxxxxxx"
+            />
+            <p className="text-xs text-muted-foreground mt-1">ตัวเลข 13 หลัก</p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="birthdate">วันเกิด <span className="text-red-500">*</span></Label>
@@ -138,7 +150,20 @@ export default function EditPatientPage({
           </div>
           <div className="space-y-2">
             <Label htmlFor="phone_number">เบอร์โทรศัพท์ <span className="text-red-500">*</span></Label>
-            <Input type="tel" id="phone_number" name="phone_number" required value={formData.phone_number} onChange={handleChange} />
+            <Input 
+              type="tel" 
+              id="phone_number" 
+              name="phone_number" 
+              required 
+              value={formData.phone_number} 
+              onChange={handleChange} 
+              minLength={10} 
+              maxLength={10} 
+              pattern="[0-9]{10}"
+              title="กรุณากรอกตัวเลข 10 หลัก"
+              placeholder="08xxxxxxxx"
+            />
+            <p className="text-xs text-muted-foreground mt-1">ตัวเลข 10 หลัก</p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="blood_group">หมู่เลือด <span className="text-red-500">*</span></Label>

@@ -61,6 +61,8 @@ export async function POST(request: Request) {
       birthdate,
       gender,
       phone_number,
+      blood_group,
+      chronic_disease,
     } = body;
 
     const newPatient = await prisma.patient.create({
@@ -71,7 +73,8 @@ export async function POST(request: Request) {
         birthdate: new Date(birthdate),
         gender,
         phone_number,
-        blood_group: "O", // Default fallback since it's required by schema
+        blood_group: blood_group || "O", // fallback
+        chronic_disease: chronic_disease || null,
       },
     });
 
