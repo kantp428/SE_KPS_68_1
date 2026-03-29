@@ -44,24 +44,24 @@ export default function StaffHome() {
       value: isLoading ? "..." : String(statsData.appointmentCount),
       icon: Calendar,
       description: "คนไข้ที่มีคิวนัดหมายวันนี้",
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
+      color: "text-blue-600 dark:text-blue-400",
+      bgColor: "bg-blue-50 dark:bg-blue-900/20",
     },
     {
       title: "กำลังรักษา",
       value: isLoading ? "..." : String(statsData.inProgressCount),
       icon: Activity,
       description: "คนไข้ที่กำลังอยู่ในการรักษาขณะนี้",
-      color: "text-emerald-600",
-      bgColor: "bg-emerald-50",
+      color: "text-emerald-600 dark:text-emerald-400",
+      bgColor: "bg-emerald-50 dark:bg-emerald-900/20",
     },
     {
       title: "รอชำระเงิน",
       value: isLoading ? "..." : String(statsData.unpaidInvoiceCount),
       icon: ReceiptText,
       description: "รายการที่รอการชำระเงิน",
-      color: "text-orange-600",
-      bgColor: "bg-orange-50",
+      color: "text-orange-600 dark:text-orange-400",
+      bgColor: "bg-orange-50 dark:bg-orange-900/20",
     },
   ];
 
@@ -117,14 +117,14 @@ export default function StaffHome() {
       </div>
 
       {/* Quick Action Banner */}
-      <div className="bg-white rounded-3xl border border-sky-100 p-8 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
+      <div className="bg-card rounded-3xl border border-sky-100 dark:border-border p-8 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="space-y-2 text-center md:text-left">
-          <h2 className="text-xl font-bold text-sky-950">จัดการข้อมูลคนไข้</h2>
+          <h2 className="text-xl font-bold text-sky-950 dark:text-foreground">จัดการข้อมูลคนไข้</h2>
           <p className="text-muted-foreground">คุณสามารถลงทะเบียนคนไข้ใหม่หรือเปิดรายการรักษาได้ทันที</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full md:w-auto">
           <Link href="/med-assist/patients/create">
-            <Button variant="outline" className="w-full rounded-full h-11 px-6 border-sky-200 text-sky-900 hover:bg-sky-50 shadow-sm transition-all active:scale-95">
+            <Button variant="outline" className="w-full rounded-full h-11 px-6 border-sky-200 dark:border-border text-sky-900 dark:text-foreground hover:bg-sky-50 dark:hover:bg-muted shadow-sm transition-all active:scale-95">
               <UserPlus className="mr-2 h-4 w-4" /> ลงทะเบียนคนไข้
             </Button>
           </Link>

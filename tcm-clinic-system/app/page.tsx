@@ -1,8 +1,18 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowRight, Stethoscope, Leaf, Activity } from "lucide-react";
+import { useTheme } from "next-themes";
+import { useEffect } from "react";
 
 export default function HomePage() {
+  const { setTheme } = useTheme();
+
+  useEffect(() => {
+    setTheme("light");
+  }, [setTheme]);
+
   return (
     <div className="min-h-screen bg-sky-50 flex flex-col font-sans">
       {/* Navbar */}
