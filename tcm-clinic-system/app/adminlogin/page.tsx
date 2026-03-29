@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
+import { useTheme } from "next-themes";
+import { useEffect } from "react";
 
 const adminLoginSchema = z.object({
   username: z.string().min(1, "กรุณากรอกชื่อผู้ใช้งาน หรือ อีเมล"),
@@ -22,7 +24,13 @@ const adminLoginSchema = z.object({
 type AdminLoginFormValues = z.infer<typeof adminLoginSchema>;
 
 export default function AdminLoginPage() {
+  const { setTheme } = useTheme();
   const router = useRouter();
+
+  useEffect(() => {
+    setTheme("light");
+  }, [setTheme]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login } = useLogin();
 

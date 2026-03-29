@@ -37,7 +37,7 @@ export default async function PatientHome() {
       {/* Services Grid Section */}
       <div className="space-y-6 mt-6">
         <div>
-          <h2 className="text-2xl font-bold text-sky-950 flex items-center gap-2">
+          <h2 className="text-2xl font-bold text-sky-950 dark:text-foreground flex items-center gap-2">
             <PlusCircle className="text-emerald-600 h-6 w-6" />
             บริการที่คลินิกของเรา
           </h2>
@@ -47,7 +47,7 @@ export default async function PatientHome() {
         </div>
 
         {services.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-sky-200">
+          <div className="text-center py-12 bg-card rounded-2xl border border-dashed border-sky-200 dark:border-border">
             <p className="text-muted-foreground">ไม่มีบริการในระบบขณะนี้</p>
           </div>
         ) : (
@@ -55,22 +55,22 @@ export default async function PatientHome() {
             {services.map((service) => (
               <div
                 key={service.id}
-                className="bg-white p-6 rounded-2xl shadow-sm border border-sky-100 hover:shadow-md hover:border-emerald-200 transition-all flex flex-col"
+                className="bg-card p-6 rounded-2xl shadow-sm border border-sky-100 dark:border-border hover:shadow-md hover:border-emerald-200 dark:hover:border-primary/50 transition-all flex flex-col"
               >
-                <div className="h-12 w-12 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 mb-4 shadow-sm border border-emerald-100">
+                <div className="h-12 w-12 bg-emerald-50 dark:bg-emerald-950/30 rounded-xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-4 shadow-sm border border-emerald-100 dark:border-emerald-900/50">
                   <Activity className="h-6 w-6" />
                 </div>
 
-                <h3 className="text-lg font-bold text-sky-900 mb-2 truncate" title={service.name}>
+                <h3 className="text-lg font-bold text-sky-900 dark:text-foreground mb-2 truncate" title={service.name}>
                   {service.name}
                 </h3>
 
-                <div className="mt-auto space-y-3 pt-4 border-t border-sky-50">
+                <div className="mt-auto space-y-3 pt-4 border-t border-sky-50 dark:border-border">
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-muted-foreground flex items-center gap-1">
                       <Clock className="w-4 h-4" /> ระยะเวลาโดยประมาณ
                     </span>
-                    <span className="font-medium text-sky-800">{service.duration_minute} นาที</span>
+                    <span className="font-medium text-sky-800 dark:text-sky-300">{service.duration_minute} นาที</span>
                   </div>
 
                   <div className="flex justify-between items-center text-sm">

@@ -107,7 +107,7 @@ export default function PatientAppointmentListPage() {
     <div className="flex flex-col gap-8 w-full max-w-5xl mx-auto pb-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-sky-950">รายการการจองของฉัน</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-sky-950 dark:text-foreground">รายการการจองของฉัน</h1>
           <p className="text-muted-foreground mt-1">
             ตรวจสอบและจัดการประวัติการนัดหมายของคุณ
           </p>
@@ -126,12 +126,12 @@ export default function PatientAppointmentListPage() {
           <Button variant="outline" onClick={loadAppointments}>ลองใหม่อีกครั้ง</Button>
         </div>
       ) : appointments.filter(a => a.status === "CONFIRMED").length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 bg-white rounded-3xl border border-dashed border-sky-200 gap-6 shadow-sm">
-          <div className="w-20 h-20 bg-sky-50 rounded-full flex items-center justify-center">
-            <CalendarDays className="w-10 h-10 text-sky-200" />
+        <div className="flex flex-col items-center justify-center py-24 bg-card rounded-3xl border border-dashed border-sky-200 dark:border-border gap-6 shadow-sm">
+          <div className="w-20 h-20 bg-sky-50 dark:bg-sky-950/30 rounded-full flex items-center justify-center">
+            <CalendarDays className="w-10 h-10 text-sky-200 dark:text-sky-600" />
           </div>
           <div className="text-center space-y-2">
-            <h3 className="text-xl font-semibold text-sky-900">ไม่พบรายการจองที่ยืนยันแล้ว</h3>
+            <h3 className="text-xl font-semibold text-sky-900 dark:text-foreground">ไม่พบรายการจองที่ยืนยันแล้ว</h3>
             <p className="text-muted-foreground text-sm max-w-xs mx-auto">
               คุณยังไม่มีรายการจองที่ยืนยันแล้วในขณะนี้
             </p>
@@ -148,12 +148,12 @@ export default function PatientAppointmentListPage() {
               const isCancellable = true; // Show for all CONFIRMED as requested
             
             return (
-              <Card key={appointment.id} className="overflow-hidden border-sky-100 shadow-sm transition-all hover:shadow-md hover:border-sky-200 rounded-2xl">
-                <CardHeader className="pb-4 bg-sky-50/50">
+              <Card key={appointment.id} className="overflow-hidden border-sky-100 dark:border-border shadow-sm transition-all hover:shadow-md hover:border-sky-200 dark:hover:border-primary/50 rounded-2xl">
+                <CardHeader className="pb-4 bg-sky-50/50 dark:bg-muted/30">
                   <div className="flex justify-between items-start">
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-sky-900">
-                        <CalendarDays className="w-4 h-4 text-sky-600" />
+                      <div className="flex items-center gap-2 text-sky-900 dark:text-foreground">
+                        <CalendarDays className="w-4 h-4 text-sky-600 dark:text-sky-400" />
                         <CardTitle className="text-lg">{formatDate(appointment.datetime)}</CardTitle>
                       </div>
                       <div className="flex items-center gap-2 text-muted-foreground text-sm">

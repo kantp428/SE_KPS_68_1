@@ -8,12 +8,19 @@ import { useLogin } from "@/hooks/useLogin";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { formatThaiId } from "../utils/formatThaiId";
+import { useTheme } from "next-themes";
 
 export default function LoginPage() {
+  const { setTheme } = useTheme();
   const router = useRouter();
+
+  useEffect(() => {
+    setTheme("light");
+  }, [setTheme]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login } = useLogin();
 
