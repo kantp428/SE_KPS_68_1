@@ -51,9 +51,8 @@ export async function GET(request: Request) {
             // ในที่นี้สมมติให้รับ Timezone GMT เข้าระบบเลย หรือจัดการแบบง่ายๆ ก่อน
             const slotDateTime = new Date(`${dateStr}T${slotHourStr}:00:00.000+07:00`);
 
-            // ตรวจสอบเงื่อนไขที่ 1: ตารางเวลาของหมอ (หมอคนไหนก็ได้ ที่ว่างในชั่วโมงนั้น)
-            // เช็คว่ามีหมออย่างน้อย 1 คน ที่ starttime <= เวลาเริ่ม และ endtime >= เวลาสิ้นสุด (+1 ชม)
-            let hasAvailableDoctor = false;
+            // ตรวจสอบเงื่อนไขที่ 1: ตารางเวลาของหมอ (นับจำนวนหมอที่ว่างในชั่วโมงนั้น)
+            let availableDoctorsCount = 0;
             for (const schedule of doctorSchedules) {
                 // Prisma จะดึง db.Time เป็น Date ให้ (1970-01-01T...)
                 // เราสนใจแค่ชั่วโมงและนาที
@@ -68,12 +67,11 @@ export async function GET(request: Request) {
                 const slotEndVal = hour + 1; // 1 duration hour
 
                 if (scheduleStartVal <= slotStartVal && scheduleEndVal >= slotEndVal) {
-                    hasAvailableDoctor = true;
-                    break;
+                    availableDoctorsCount++;
                 }
             }
 
-            if (!hasAvailableDoctor) {
+            if (availableDoctorsCount === 0) {
                 slots.push({
                     time: timeStr,
                     isAvailable: false,
@@ -82,7 +80,9 @@ export async function GET(request: Request) {
                 continue; // ข้ามไปเช็คเวลาถัดไป
             }
 
-            // ตรวจสอบเงื่อนไขที่ 2: ห้องว่าง
+            // ตรวจสอบเงื่อนไขที่ 2: เช็คคิวกับความจุสูงสุดที่รับได้ (min(ห้อง, หมอ))
+            const maxAppointmentsCapacity = Math.min(totalRooms, availableDoctorsCount);
+
             // นับ appointment ใน slots นี้
             const appointmentsAtSlot = await prisma.appointment.count({
                 where: {
@@ -93,11 +93,11 @@ export async function GET(request: Request) {
                 }
             });
 
-            if (appointmentsAtSlot >= totalRooms) {
+            if (appointmentsAtSlot >= maxAppointmentsCapacity) {
                 slots.push({
                     time: timeStr,
                     isAvailable: false,
-                    reason: "ห้องตรวจเต็มแล้ว"
+                    reason: "คิวเต็มแล้ว (แพทย์หรือห้องไม่ว่าง)"
                 });
             } else {
                 slots.push({
