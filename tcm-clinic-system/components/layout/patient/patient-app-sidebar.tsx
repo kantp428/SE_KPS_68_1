@@ -1,4 +1,10 @@
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
@@ -9,24 +15,18 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useAuth } from "@/context/AuthContext";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  LogOut,
-  ChevronsUpDown,
   CalendarDays,
+  ChevronsUpDown,
+  CircleCheckBig,
   HeartPulse,
   Home,
+  LogOut,
   UserCircle2Icon,
-  CircleCheckBig,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
 
 const userSign = {
   title: "TCM CLINIC",
@@ -37,9 +37,12 @@ const userSign = {
 const items = [
   { title: "หน้าหลัก", url: "/patient", icon: Home },
   { title: "จอง", url: "/patient/appointment", icon: CalendarDays },
-  { title: "ประวัติการจอง", url: "/patient/appointment/list", icon: CircleCheckBig },
+  {
+    title: "ประวัติการจอง",
+    url: "/patient/h-appointment",
+    icon: CircleCheckBig,
+  },
   { title: "ข้อมูลส่วนตัว", url: "/patient/profile", icon: UserCircle2Icon },
-
 ];
 
 export function PatientAppSidebar() {
@@ -70,7 +73,9 @@ export function PatientAppSidebar() {
 
                   <div className="grid flex-1 text-left text-sm leading-tight group-data-[state=collapsed]:hidden">
                     <span className="truncate font-semibold">
-                      {isLoading ? "กำลังโหลด..." : (user?.fullName || user?.username || "Guest")}
+                      {isLoading
+                        ? "กำลังโหลด..."
+                        : user?.fullName || user?.username || "Guest"}
                     </span>
                     <span className="truncate text-xs">
                       {user?.role || "ผู้ใช้งาน"}
@@ -85,7 +90,10 @@ export function PatientAppSidebar() {
                 align="end"
                 sideOffset={4}
               >
-                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive cursor-pointer">
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="text-destructive focus:text-destructive cursor-pointer"
+                >
                   <LogOut className="size-4 mr-2" />
                   <span>ออกจากระบบ</span>
                 </DropdownMenuItem>
