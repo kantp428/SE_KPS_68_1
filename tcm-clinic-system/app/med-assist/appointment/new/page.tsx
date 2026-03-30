@@ -1,5 +1,6 @@
 "use client";
 
+import { formatThaiId } from "@/app/utils/formatThaiId";
 import { handleException } from "@/app/utils/handleException";
 import { BreadcrumbCustom } from "@/components/ui/breadcrum-custom";
 import { Button } from "@/components/ui/button";
@@ -92,6 +93,7 @@ const NewMedAssistAppointmentPageContent = () => {
   const selectedDate = watch("date");
   const selectedTime = watch("time");
   const selectedPatientId = Number(watch("patientId") ?? 0);
+  const patientSearchDigits = patientSearch.replace(/\D/g, "");
 
   useEffect(() => {
     if (!Number.isInteger(patientIdFromQuery) || patientIdFromQuery <= 0) {
@@ -242,9 +244,21 @@ const NewMedAssistAppointmentPageContent = () => {
               <Input
                 placeholder="พิมพ์ชื่อหรือเลขบัตรประชาชน"
                 className="h-10"
-                value={patientSearch}
-                onChange={(e) => setPatientSearch(e.target.value)}
+                value={
+                  patientSearchDigits.length > 0
+                    ? formatThaiId(patientSearchDigits)
+                    : patientSearch
+                }
+                onChange={(e) => {
+                  const rawValue = e.target.value;
+                  const digits = rawValue.replace(/\D/g, "");
+
+                  setPatientSearch(digits.length > 0 ? digits.slice(0, 13) : rawValue);
+                }}
               />
+              <p className="text-xs text-muted-foreground">
+                ค้นหาด้วยเลขบัตรประชาชนได้เมื่อกรอกครบ 13 หลัก
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -276,13 +290,17 @@ const NewMedAssistAppointmentPageContent = () => {
                           }
                         />
                       </SelectTrigger>
-                      <SelectContent>
+                        <SelectContent>
                         {patientOptions.map((option) => (
                           <SelectItem
                             key={option.value}
                             value={String(option.value)}
                           >
-                            {option.label} | {option.thaiId}
+                            <span className="font-mono">
+                              {formatThaiId(option.thaiId)}
+                            </span>
+                            <span>|</span>
+                            <span>{option.label}</span>
                           </SelectItem>
                         ))}
                       </SelectContent>

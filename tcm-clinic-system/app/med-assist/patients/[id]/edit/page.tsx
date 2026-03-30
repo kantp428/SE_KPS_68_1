@@ -4,6 +4,7 @@ import { formatPhoneNumber } from "@/app/utils/formatPhoneNumber";
 import { formatThaiId } from "@/app/utils/formatThaiId";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -52,6 +53,7 @@ export default function EditPatientPage({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [birthdateOpen, setBirthdateOpen] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [formData, setFormData] = useState<EditPatientFormData>({
     first_name: "",
     last_name: "",
@@ -106,8 +108,8 @@ export default function EditPatientPage({
     fetchPatient();
   }, [patientId]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitEdit = async () => {
+    setShowConfirmDialog(false);
     setSaving(true);
 
     try {
@@ -131,6 +133,11 @@ export default function EditPatientPage({
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setShowConfirmDialog(true);
   };
 
   if (loading) {
@@ -366,6 +373,15 @@ export default function EditPatientPage({
           </Button>
         </div>
       </form>
+
+      <ConfirmDialog
+        open={showConfirmDialog}
+        onOpenChange={setShowConfirmDialog}
+        title="ยืนยันการบันทึก"
+        description="ต้องการบันทึกการแก้ไขข้อมูลคนไข้นี้ใช่หรือไม่"
+        confirmText={saving ? "กำลังบันทึก..." : "ยืนยันบันทึก"}
+        onConfirm={submitEdit}
+      />
     </div>
   );
 }

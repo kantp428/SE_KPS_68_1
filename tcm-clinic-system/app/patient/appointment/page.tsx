@@ -65,7 +65,7 @@ export default function AppointmentPage() {
                 time: selectedTime,
             });
             toast.success("จองคิวสำเร็จ!");
-            router.push("/patient/appointment/list"); // พาไปหน้ารายการการจอง
+            router.push("/patient/h-appointment"); // พาไปหน้ารายการการจอง
             router.refresh();
         } catch (err) {
             // ถ้าระบบโยน error ออกมา ให้หยุดการทำงานและให้ซับมิทใหม่ได้

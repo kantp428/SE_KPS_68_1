@@ -33,7 +33,7 @@ import { z } from "zod";
 
 const registerSchema = z
   .object({
-    email: z.string().email("รูปแบบอีเมลไม่ถูกต้อง"),
+    email: z.string().email({ message: "รูปแบบอีเมลไม่ถูกต้อง" }),
     password: z.string().min(6, "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร"),
     confirmPassword: z.string().min(6, "กรุณายืนยันรหัสผ่าน"),
     firstName: z.string().min(1, "กรุณากรอกชื่อ"),
@@ -111,7 +111,6 @@ function RegisterFormContent() {
   });
 
   const thaiIdValue = watch("thaiId");
-  const phoneNumberValue = watch("phoneNumber");
   const birthdate = watch("birthdate");
   const birthdateValue = birthdate
     ? new Date(`${birthdate}T00:00:00`)
@@ -470,23 +469,24 @@ function RegisterFormContent() {
                 <Label htmlFor="phoneNumber">
                   เบอร์โทรศัพท์ <span className="text-destructive">*</span>
                 </Label>
-                <Input
-                  id="phoneNumber"
-                  placeholder="081-234-5678"
-                  readOnly={isExistingPatient}
-                  disabled={isSubmitting}
-                  {...register("phoneNumber")}
-                  value={formatPhoneNumber(phoneNumberValue || "")}
-                  onChange={(e) =>
-                    setValue(
-                      "phoneNumber",
-                      e.target.value.replace(/\D/g, "").slice(0, 10),
-                      { shouldValidate: true, shouldDirty: true }
-                    )
-                  }
-                  className={`${errors.phoneNumber ? "border-destructive" : ""} ${
-                    isExistingPatient ? "cursor-not-allowed bg-muted" : ""
-                  }`}
+                <Controller
+                  control={control}
+                  name="phoneNumber"
+                  render={({ field }) => (
+                    <Input
+                      id="phoneNumber"
+                      placeholder="081-234-5678"
+                      readOnly={isExistingPatient}
+                      disabled={isSubmitting}
+                      value={formatPhoneNumber(field.value || "")}
+                      onChange={(e) =>
+                        field.onChange(e.target.value.replace(/\D/g, "").slice(0, 10))
+                      }
+                      className={`${errors.phoneNumber ? "border-destructive" : ""} ${
+                        isExistingPatient ? "cursor-not-allowed bg-muted" : ""
+                      }`}
+                    />
+                  )}
                 />
                 {errors.phoneNumber && (
                   <p className="text-xs text-destructive">

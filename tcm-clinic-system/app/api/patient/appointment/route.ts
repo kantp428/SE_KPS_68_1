@@ -89,7 +89,7 @@ export async function POST(request: Request) {
             }
         });
 
-        let hasAvailableDoctor = false;
+        let availableDoctorsCount = 0;
         for (const schedule of doctorSchedules) {
             const startHour = schedule.starttime.getUTCHours();
             const startMinute = schedule.starttime.getUTCMinutes();
@@ -102,19 +102,20 @@ export async function POST(request: Request) {
             const slotEndVal = hour + 1; // กินเวลา 1 ชม.
 
             if (scheduleStartVal <= slotStartVal && scheduleEndVal >= slotEndVal) {
-                hasAvailableDoctor = true;
-                break;
+                availableDoctorsCount++;
             }
         }
 
-        if (!hasAvailableDoctor) {
+        if (availableDoctorsCount === 0) {
             return NextResponse.json({ message: "No doctors available for this time slot" }, { status: 400 });
         }
 
-        // ตรวจสอบเงื่อนไข 2: นับห้องตรวจรวม
+        // ตรวจสอบเงื่อนไข 2: หาคิวสูงสุดที่รับได้เทียบกับยอดจอง
         const totalRooms = await prisma.room.count({
             where: { status: "AVAILABLE" }
         });
+
+        const maxAppointmentsCapacity = Math.min(totalRooms, availableDoctorsCount);
 
         const appointmentsAtSlot = await prisma.appointment.count({
             where: {
@@ -125,8 +126,8 @@ export async function POST(request: Request) {
             }
         });
 
-        if (appointmentsAtSlot >= totalRooms) {
-            return NextResponse.json({ message: "No rooms available for this time slot" }, { status: 400 });
+        if (appointmentsAtSlot >= maxAppointmentsCapacity) {
+            return NextResponse.json({ message: "คิวเต็มแล้วสำหรับเวลานี้ (ไม่มีแพทย์หรือห้องว่างพอ)" }, { status: 400 });
         }
 
         // ตรวจสอบว่าผู้ป่วยจองซ้ำในเวลาเดียวกันหรือไม่

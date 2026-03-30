@@ -14,6 +14,7 @@ import { formatPhoneNumber } from "@/app/utils/formatPhoneNumber";
 import { formatThaiId } from "@/app/utils/formatThaiId";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -54,6 +55,9 @@ function formatThaiDateWithBuddhistYear(date: Date) {
 export default function CreatePatientPage() {
   const router = useRouter();
   const [birthdateOpen, setBirthdateOpen] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingFormData, setPendingFormData] =
+    useState<CreatePatientFormValues | null>(null);
   const {
     control,
     register,
@@ -83,7 +87,9 @@ export default function CreatePatientPage() {
     ? `${formatThaiDateWithBuddhistYear(birthdateValue)} (อายุ ${differenceInYears(new Date(), birthdateValue)} ปี)`
     : null;
 
-  const onSubmit = async (data: CreatePatientFormValues) => {
+  const submitCreate = async (data: CreatePatientFormValues) => {
+    setShowConfirmDialog(false);
+
     try {
       const res = await fetch("/api/patients", {
         method: "POST",
@@ -103,6 +109,11 @@ export default function CreatePatientPage() {
       console.error(err);
       alert("Something went wrong");
     }
+  };
+
+  const onSubmit = (data: CreatePatientFormValues) => {
+    setPendingFormData(data);
+    setShowConfirmDialog(true);
   };
 
   return (
@@ -389,6 +400,19 @@ export default function CreatePatientPage() {
           </Button>
         </div>
       </form>
+
+      <ConfirmDialog
+        open={showConfirmDialog}
+        onOpenChange={setShowConfirmDialog}
+        title="ยืนยันการบันทึก"
+        description="ต้องการสร้างข้อมูลคนไข้นี้ใช่หรือไม่"
+        confirmText={isSubmitting ? "กำลังบันทึก..." : "ยืนยันบันทึก"}
+        onConfirm={() => {
+          if (pendingFormData) {
+            void submitCreate(pendingFormData);
+          }
+        }}
+      />
     </div>
   );
 }

@@ -1,12 +1,13 @@
 ﻿import prisma from "@/lib/prisma";
 import { appointment_status_enum } from "@prisma/client";
 import { NextResponse } from "next/server";
-import { decryptData } from "@/lib/encryption";
+import { decryptData, encryptData } from "@/lib/encryption";
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search")?.trim();
+    const thaiIdSearch = search?.replace(/\D/g, "") || "";
     const limit = Math.min(
       50,
       Math.max(1, parseInt(searchParams.get("limit") || "10", 10)),
@@ -38,7 +39,9 @@ export async function GET(req: Request) {
             OR: [
               { first_name: { contains: search, mode: "insensitive" } },
               { last_name: { contains: search, mode: "insensitive" } },
-              { thai_id: { contains: search, mode: "insensitive" } },
+              ...(thaiIdSearch.length === 13
+                ? [{ thai_id: encryptData(thaiIdSearch) }]
+                : []),
             ],
           }
         : undefined,
@@ -64,7 +67,7 @@ export async function GET(req: Request) {
         bookingAt: p.appointment[0]?.datetime ?? null,
       })),
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { message: "Internal server error" },
       { status: 500 },

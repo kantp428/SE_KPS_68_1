@@ -157,7 +157,7 @@ const RoomPage = () => {
                     <Button
                       size="icon"
                       variant="ghost"
-                      onClick={() => router.push(`/staff/room/${l.id}`)}
+                      onClick={() => router.push(`/med-assist/room/${l.id}`)}
                     >
                       <Pencil className="w-4 h-4" />
                     </Button>
