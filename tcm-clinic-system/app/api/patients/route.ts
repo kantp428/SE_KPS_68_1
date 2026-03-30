@@ -65,11 +65,13 @@ export async function POST(request: Request) {
       chronic_disease,
     } = body;
 
+    const { encryptData } = await import("@/lib/encryption");
+    
     const newPatient = await prisma.patient.create({
       data: {
         first_name,
         last_name,
-        thai_id,
+        thai_id: encryptData(thai_id),
         birthdate: new Date(birthdate),
         gender,
         phone_number,
